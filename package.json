@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@material-ui/core": "latest",
+    "axios": "^0.19.1",
     "clsx": "latest",
     "next": "latest",
     "react": "latest",
@@ -15,6 +16,7 @@
     "start": "next start"
   },
   "devDependencies": {
+    "@types/axios": "^0.14.0",
     "@types/next": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
