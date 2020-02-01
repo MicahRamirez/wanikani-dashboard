@@ -6,9 +6,12 @@
     "@material-ui/core": "latest",
     "axios": "^0.19.1",
     "clsx": "latest",
+    "luxon": "^1.22.0",
     "next": "latest",
+    "qs": "^6.9.1",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "recharts": "^2.0.0-beta.1"
   },
   "scripts": {
     "dev": "next",
@@ -17,7 +20,9 @@
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",
+    "@types/luxon": "^1.21.0",
     "@types/next": "latest",
+    "@types/qs": "^6.9.0",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "typescript": "latest"

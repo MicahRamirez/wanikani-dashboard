@@ -1,8 +1,21 @@
 import axios, { AxiosResponse } from "axios";
+import qs from "qs";
+
+interface WanikaniNextPageUrl {
+  page_after_id: string;
+}
+const isWanikaniPageUrl = (
+  parsedQueryString: any
+): parsedQueryString is WanikaniNextPageUrl => {
+  return (
+    typeof parsedQueryString === "object" &&
+    typeof parsedQueryString.page_after_id === "string"
+  );
+};
 
 const wanikaniApi = axios.create({
   baseURL: "https://api.wanikani.com/v2",
-  timeout: 1000
+  timeout: 3000
 });
 
 export interface WanikaniApiResponse<T> {
@@ -35,11 +48,10 @@ export interface ReviewStatistic {
   hidden: boolean;
 }
 
-const getAllReviewStatistics = async (apiKey: string) => {
-  const reviewStatistics = {};
-  let response: AxiosResponse<WanikaniApiResponse<
-    WanikaniApiResponse<ReviewStatistic>
-  >>;
+export const getAllReviewStatistics = async (apiKey: string) => {
+  let response:
+    | AxiosResponse<WanikaniApiResponse<WanikaniApiResponse<ReviewStatistic>>>
+    | undefined;
   try {
     response = await wanikaniApi.get<
       WanikaniApiResponse<WanikaniApiResponse<ReviewStatistic>>
@@ -52,11 +64,43 @@ const getAllReviewStatistics = async (apiKey: string) => {
     response = undefined;
   }
   if (!response) {
-    return {};
+    console.log("there was no response");
+    return [];
   }
-  const wkApiResponse = response.data;
-  // reviewStatistics.collectionUpdatedAt = response.
-  // getAllReviewStatisticsHelper()
+  const listOfData = [response.data.data];
+  if (!response.data.pages) {
+    // no pages so we are done
+    return listOfData;
+  }
+  let nextUrl = response.data.pages.next_url;
+  try {
+    while (nextUrl !== null) {
+      const queryStringParms = qs.parse(
+        nextUrl.slice(nextUrl.lastIndexOf("?") + 1)
+      );
+      debugger;
+      if (!isWanikaniPageUrl(queryStringParms)) {
+        return;
+      }
+      const pageAfterid = queryStringParms.page_after_id;
+      response = await wanikaniApi.get<
+        WanikaniApiResponse<WanikaniApiResponse<ReviewStatistic>>
+      >(`/review_statistics?page_after_id=${pageAfterid}`, {
+        headers: { Authorization: `Bearer ${apiKey}` }
+      });
+      listOfData.push(response.data.data);
+      nextUrl = response.data.pages ? response.data.pages.next_url : null;
+    }
+  } catch (error) {
+    console.error("something broke", error);
+  }
+  console.log(listOfData);
+  return listOfData;
 };
 
-// const getAllReviewStatisticsHelper = (pageUrl: string) => {};
+// get level progressions
+// from that determine highest level
+
+// https://docs.api.wanikani.com/20170710/?shell#get-all-subjects
+// get all [radicals, kanji] from the highest level
+// determine fastest possible level up path
