@@ -6,6 +6,7 @@ import Link from "../src/Link";
 import { DateTime } from "luxon";
 
 import { getAllReviewStatistics } from "../src/api";
+import { LevelUpChart } from "../src/LevelUpChart";
 import { ApiKeyForm } from "../src/ApiKeyForm";
 
 const API_KEY_LOCAL_STORAGE = "apiKey";
@@ -51,6 +52,7 @@ export default function Index() {
       {`Your api key ${apiKey}`}
       <Box my={4}>
         {!apiKey && <ApiKeyForm saveApiKey={saveApiKey} />}
+        {apiKey && <LevelUpChart apiKey={apiKey} />}
         <Typography variant="h4" component="h1" gutterBottom>
           Next.js with TypeScript example
         </Typography>

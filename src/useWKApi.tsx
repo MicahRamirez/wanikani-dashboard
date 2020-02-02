@@ -1,11 +1,18 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, SetStateAction, Dispatch } from "react";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 
 export interface apiOptions {
-  initialData: any;
-  isPaginated: boolean;
+  initialData?: any;
+  isPaginated?: boolean;
   axiosConfig: AxiosRequestConfig;
-  mungeFunction: Function; // needs to be able to handle undef data, single element, or array...
+  mungeFunction?: Function; // needs to be able to handle undef data, single element, or array...
+}
+
+interface WKHookPayload<T> {
+  data: T | T[];
+  isLoading: boolean;
+  isError: boolean;
+  doFetch: Dispatch<SetStateAction<string>>;
 }
 
 export interface WanikaniApiResponse<T> {
@@ -20,12 +27,11 @@ export interface WanikaniApiResponse<T> {
   data_updated_at: string; // 2020-01-20T11:07:04.987403Z
   data: T[];
 }
-
-const useWKApi = <T extends unknown>(
+export const useWKApi = <T extends unknown>(
   initialUrl: string,
   options: apiOptions,
   apiKey: string
-) => {
+): WKHookPayload<T>[] => {
   const [data, setData] = useState(options.initialData);
   const [url, setUrl] = useState(initialUrl);
   const [isLoading, setIsLoading] = useState(false);
@@ -72,8 +78,8 @@ const useWKApi = <T extends unknown>(
     {
       data: options.mungeFunction ? options.mungeFunction(data) : data,
       isLoading,
-      isError
-    },
-    setUrl
+      isError,
+      doFetch: setUrl
+    }
   ];
 };
