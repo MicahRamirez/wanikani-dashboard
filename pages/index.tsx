@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from "react";
 import Container from "@material-ui/core/Container";
-import Typography from "@material-ui/core/Typography";
-import Box from "@material-ui/core/Box";
-import Link from "../src/Link";
 import { DateTime } from "luxon";
 
 import { getAllReviewStatistics } from "../src/api";
@@ -48,18 +45,10 @@ export default function Index() {
     }
   }, [apiKey]);
   return (
-    <Container maxWidth="sm">
+    <Container>
       {`Your api key ${apiKey}`}
-      <Box my={4}>
-        {!apiKey && <ApiKeyForm saveApiKey={saveApiKey} />}
-        {apiKey && <LevelUpChart apiKey={apiKey} />}
-        <Typography variant="h4" component="h1" gutterBottom>
-          Next.js with TypeScript example
-        </Typography>
-        <Link href="/about" color="secondary">
-          Go to the about page
-        </Link>
-      </Box>
+      {!apiKey && <ApiKeyForm saveApiKey={saveApiKey} />}
+      {apiKey && <LevelUpChart apiKey={apiKey} />}
     </Container>
   );
 }

@@ -25,6 +25,7 @@
     "@types/qs": "^6.9.0",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "@types/recharts": "^1.8.5",
     "typescript": "latest"
   }
 }

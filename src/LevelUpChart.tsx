@@ -1,6 +1,15 @@
 import React from "react";
 import CircularProgress from "@material-ui/core/CircularProgress";
-// import { BarChart, CartesianGrid, XAxis, YAxis, Bar } from "recharts";
+import {
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  Legend,
+  Tooltip,
+  Line,
+  LineChart,
+  CartesianGrid
+} from "recharts";
 import { useWKApi, WanikaniCollectionWrapper } from "./useWKApi";
 import { DateTime } from "luxon";
 
@@ -103,10 +112,21 @@ const analyzeLevelProgressions = (
       return {
         level: levelProgression.level,
         daysToLevelUp: completedAt.diff(startedAt, "days").days,
-        hoursToLevelUp: completedAt.diff(startedAt, "hours").hours
+        completedAt: completedAt.toString(),
+        startedAt: startedAt.toString(),
+        time: completedAt.toLocal().valueOf()
       };
-    } else if (levelProgression.started_at) {
-      return { level: levelProgression.level };
+    } else {
+      const startedAt = levelProgression.started_at
+        ? DateTime.fromISO(levelProgression.started_at)
+        : DateTime.utc();
+      return {
+        level: levelProgression.level,
+        startedAt: startedAt.toString(),
+        daysToLevelUp: 0,
+        completedAt: undefined,
+        time: 0
+      };
     }
   });
   const averageLevelUpInDays =
@@ -122,7 +142,54 @@ const analyzeLevelProgressions = (
     }
     return 0;
   });
-  return { formattedData, averageLevelUpInDays };
+  formattedData[formattedData.length - 1] = {
+    ...formattedData[formattedData.length - 1],
+
+    daysToLevelUp: averageLevelUpInDays,
+    completedAt: DateTime.fromISO(
+      formattedData[formattedData.length - 1].startedAt
+    )
+      .plus({ days: averageLevelUpInDays })
+      .toString(),
+    time: DateTime.fromISO(formattedData[formattedData.length - 1].startedAt)
+      .plus({ days: averageLevelUpInDays })
+      .toLocal()
+      .valueOf()
+  };
+  // sorted up to max level completed
+  const formattedDataWithProjections = [...formattedData];
+  for (let i = formattedDataWithProjections.length; i <= 60; i++) {
+    const previousLevelData = formattedDataWithProjections[i - 1];
+    const previousCompletedAt =
+      previousLevelData && previousLevelData.completedAt
+        ? previousLevelData.completedAt
+        : "";
+    const levelData = {
+      level: i,
+      daysToLevelUp: averageLevelUpInDays,
+      startedAt: previousLevelData.completedAt as string,
+      completedAt: DateTime.fromISO(previousCompletedAt)
+        .plus({
+          days: averageLevelUpInDays
+        })
+        .toString(),
+      time: DateTime.fromISO(previousCompletedAt)
+        .plus({
+          days: averageLevelUpInDays
+        })
+        .toLocal()
+        .valueOf(),
+      projectType: "average"
+    };
+    formattedDataWithProjections.push(levelData);
+  }
+  const timeVal = DateTime.fromMillis(formattedDataWithProjections[0].time);
+  console.log(timeVal);
+  const f = { month: "short", day: "numeric", year: "numeric" };
+  const varsa = timeVal.setLocale("en-US").toLocaleString(f);
+  console.log(varsa);
+  debugger;
+  return { formattedDataWithProjections, averageLevelUpInDays };
 };
 
 export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
@@ -169,30 +236,35 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
     targetLevel,
     originalLevel
   } = analyzeResetData(resetData);
-  const { formattedData, averageLevelUpInDays } = analyzeLevelProgressions(
-    data,
-    {
-      mostRecentResetTimeStamp,
-      targetLevel,
-      originalLevel
-    }
-  );
+  const { formattedDataWithProjections } = analyzeLevelProgressions(data, {
+    mostRecentResetTimeStamp,
+    targetLevel,
+    originalLevel
+  });
+  console.log(formattedDataWithProjections);
   return (
     <div>
-      <div>
-        <p>Level Progression Data</p>
-        {JSON.stringify(data)}
-      </div>
-      <div>
-        <p>Reset Data</p>
-        {JSON.stringify(resetData)}
-      </div>
-      <div>
-        <p>data analysis</p>
-        {JSON.stringify(formattedData)}
-        <p>average</p>
-        {JSON.stringify(averageLevelUpInDays)}
-      </div>
+      <ResponsiveContainer width={"95%"} height={500}>
+        <LineChart data={formattedDataWithProjections}>
+          <CartesianGrid strokeDasharray="3 3" />
+
+          <XAxis
+            dataKey="time"
+            type="number"
+            domain={["auto", "auto"]}
+            scale="time"
+            tickFormatter={unixTime => {
+              const timeVal = DateTime.fromMillis(unixTime);
+              const f = { month: "short", day: "numeric", year: "numeric" };
+              return timeVal.setLocale("en-US").toLocaleString(f);
+            }}
+          />
+          <YAxis dataKey="level" />
+          <Tooltip />
+          <Legend />
+          <Line type="monotone" dataKey="level" stroke="#8884d8" />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 };
