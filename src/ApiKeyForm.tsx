@@ -3,11 +3,13 @@ import TextField from "@material-ui/core/TextField";
 import Button from "@material-ui/core/Button";
 
 const apiKeyIsValid = (apiKey: string) => {
+  console.error("api key is invalid");
+  console.log(apiKey.length === 36);
   return apiKey.length === 36;
 };
 // todo type handleClick properly
 export const ApiKeyForm = ({ saveApiKey }: { saveApiKey: any }) => {
-  const [apiKeyInput, setApiKeyInput] = useState();
+  const [apiKeyInput, setApiKeyInput] = useState("");
   const [showError, setShowError] = useState(false);
   const handleChange = (event: any) => {
     setApiKeyInput(event.target.value.trim());
@@ -18,9 +20,9 @@ export const ApiKeyForm = ({ saveApiKey }: { saveApiKey: any }) => {
 
   const handleClick = () => {
     if (!apiKeyIsValid(apiKeyInput)) {
-      return setShowError(true);
+      setShowError(true);
     } else {
-      saveApiKey();
+      saveApiKey(apiKeyInput);
     }
   };
 

@@ -1,15 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Container from "@material-ui/core/Container";
-import { DateTime } from "luxon";
 
-import { getAllReviewStatistics } from "../src/api";
 import { LevelUpChart } from "../src/LevelUpChart";
 import { ApiKeyForm } from "../src/ApiKeyForm";
 
 const API_KEY_LOCAL_STORAGE = "apiKey";
-const WK_REVIEW_STATISTICS = "wkReviewStatistics";
-// const WK_LEVEL_PROGRESSIONS = "wkLevelProgressions";
-const DATA_LAST_UPDATED_TIMESTAMP_LOCAL_STORAGE = "wanikaniLastUpdated";
 
 const isClientSide = () => typeof Storage !== "undefined";
 
@@ -18,7 +13,9 @@ export default function Index() {
     isClientSide() && localStorage.getItem(API_KEY_LOCAL_STORAGE);
   const [apiKey, setApiKey] = useState(savedApiKey || undefined);
   const saveApiKey = (apiKeyInput: string) => {
+    console.log("setting api key");
     // validate apiKey
+    console.log(apiKeyInput);
     setApiKey(apiKeyInput);
     isClientSide() &&
       typeof apiKeyInput === "string" &&
@@ -26,24 +23,6 @@ export default function Index() {
     console.log("handling click");
   };
 
-  useEffect(() => {
-    const hasLocalData =
-      isClientSide() && localStorage.getItem(WK_REVIEW_STATISTICS) !== null;
-    if (apiKey !== undefined) {
-      !hasLocalData &&
-        getAllReviewStatistics(apiKey).then(data => {
-          if (data && data.length > 0) {
-            isClientSide() &&
-              localStorage.setItem(WK_REVIEW_STATISTICS, JSON.stringify(data));
-            isClientSide() &&
-              localStorage.setItem(
-                DATA_LAST_UPDATED_TIMESTAMP_LOCAL_STORAGE,
-                DateTime.utc().toString()
-              );
-          }
-        });
-    }
-  }, [apiKey]);
   return (
     <Container>
       {`Your api key ${apiKey}`}

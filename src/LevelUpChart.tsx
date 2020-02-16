@@ -11,7 +11,7 @@ import {
   CartesianGrid
 } from "recharts";
 import { useWKApi, WanikaniCollectionWrapper } from "./useWKApi";
-import { DateTime } from "luxon";
+import { DateTime, Duration } from "luxon";
 
 const LEVEL_PROGRESSIONS_API_URL =
   "https://api.wanikani.com/v2/level_progressions";
@@ -38,6 +38,22 @@ export interface Reset {
   confirmed_at: string; //Timestamp when the user confirmed the reset.
 }
 
+// level: levelProgression.level,
+// daysToLevelUp: completedAt.diff(startedAt, "days").days,
+// completedAt: completedAt.toString(),
+// startedAt: startedAt.toString(),
+// time: completedAt.toLocal().valueOf()
+export interface ChartData {
+  level: number;
+  timeToLeveUp?: Duration;
+  completedAt: DateTime;
+  startedAt: DateTime;
+  time?: number; // ms since epoch
+  timeaverage?: number;
+  timemedian?: number;
+  type: "average" | "recorded" | "median";
+}
+
 const aggregateLevelProgressionData = (data: LevelProgression[]) => {
   return data;
 };
@@ -50,6 +66,49 @@ const unwrapCollectionWrapper = <T extends unknown>(
   wrappedData: WanikaniCollectionWrapper<T>[]
 ): T[] => {
   return wrappedData.map<T>(wrappedElement => wrappedElement.data);
+};
+
+const getAverageLevelUpInDays = (obj: ChartData[]): number => {
+  return (
+    obj.reduce<number>((acc, curr) => {
+      if (curr && curr.timeToLeveUp) {
+        return acc + curr.timeToLeveUp.days;
+      }
+      return acc;
+    }, 0) / obj.length
+  );
+};
+
+const formatLevelProgressions = (
+  levelProgressions: LevelProgression[]
+): ChartData[] => {
+  const formattedData = levelProgressions.map<ChartData>(levelProgression => {
+    const placeHolderDateTime = DateTime.utc();
+    const startedAt = levelProgression.started_at
+      ? DateTime.fromISO(levelProgression.started_at)
+      : placeHolderDateTime;
+    const completedAt = levelProgression.passed_at
+      ? DateTime.fromISO(levelProgression.passed_at)
+      : placeHolderDateTime;
+    return {
+      level: levelProgression.level,
+      timeToLeveUp: completedAt.diff(startedAt),
+      completedAt: completedAt,
+      startedAt: startedAt,
+      type: "recorded",
+      time:
+        completedAt.valueOf() !== placeHolderDateTime.valueOf()
+          ? completedAt.valueOf()
+          : 0 // use 0 to signify that this is a placeholder
+    };
+  });
+  formattedData.sort((a, b) => {
+    if (a && b) {
+      return a.level - b.level;
+    }
+    return 0;
+  });
+  return formattedData;
 };
 
 const analyzeResetData = (
@@ -73,6 +132,49 @@ const analyzeResetData = (
   };
 };
 
+const filterLevelProgressions = (
+  levelProgressions: LevelProgression[],
+  targetLevel: number,
+  lastResetTimeStamp: string
+) => {
+  const resetDateTime = DateTime.fromISO(lastResetTimeStamp);
+  return levelProgressions.filter(elem => {
+    const levelProgressionTimeStamp = DateTime.fromISO(elem.created_at);
+    // maybe can reduce some of this logic but there are two cases *i think* need to be handled
+    // past exclusion case, the user could only partially reset thus we don't want to exclude all level progressions that are behind the timestamp
+    // so if the progression came before the latest reset BUT it was less than the target level then this is valid data
+    // Progression Oct 7 lvl 1
+    // Progression Oct 8 lvl 2
+    // Progression Oct 9 lvl 3
+    // Oct 10 Reset lvl 2 ... reset timestmap of Oct 10
+    // we should keep progression lvl 1 and accept lvl progressions created after the reset
+    return (
+      (levelProgressionTimeStamp <= resetDateTime &&
+        elem.level <= targetLevel) ||
+      levelProgressionTimeStamp > resetDateTime
+    );
+  });
+};
+
+const getMedianLevelUpInDays = (formattedData: ChartData[]) => {
+  const levelUpTimeInDays = formattedData
+    .filter(data => {
+      console.log("filtering out an uncompleted level");
+      return data.time !== 0;
+    })
+    .map(data => {
+      return data.completedAt.diff(data.startedAt, "days").days;
+    });
+  levelUpTimeInDays.sort((a, b) => a - b);
+  if (levelUpTimeInDays.length % 2 === 0) {
+    const middleLeft = levelUpTimeInDays.length / 2;
+    const middleRight = middleLeft - 1;
+    return levelUpTimeInDays[middleLeft] + levelUpTimeInDays[middleRight] / 2;
+  } else {
+    return levelUpTimeInDays[Math.floor(levelUpTimeInDays.length / 2)];
+  }
+};
+
 const analyzeLevelProgressions = (
   data: WanikaniCollectionWrapper<LevelProgression>[],
   {
@@ -84,111 +186,86 @@ const analyzeLevelProgressions = (
     originalLevel: number;
   }
 ) => {
-  const levelProgressions = unwrapCollectionWrapper(data);
-
-  const resetTimeStamp = DateTime.fromISO(mostRecentResetTimeStamp);
-  const filteredLevelProgressions = levelProgressions.filter(elem => {
-    const levelProgressionTimeStamp = DateTime.fromISO(elem.created_at);
-    // maybe can reduce some of this logic but there are two cases *i think* need to be handled
-    // past exclusion case, the user could only partially reset thus we don't want to exclude all level progressions that are behind the timestamp
-    // so if the progression came before the latest reset BUT it was less than the target level then this is valid data
-    // Progression Oct 7 lvl 1
-    // Progression Oct 8 lvl 2
-    // Progression Oct 9 lvl 3
-    // Oct 10 Reset lvl 2 ... reset timestmap of Oct 10
-    // we should keep progression lvl 1 and accept lvl progressions created after the reset
-    return (
-      (levelProgressionTimeStamp <= resetTimeStamp &&
-        elem.level <= targetLevel) ||
-      levelProgressionTimeStamp > resetTimeStamp
-    );
-  });
-
-  const formattedData = filteredLevelProgressions.map(levelProgression => {
-    console.log(levelProgression.started_at);
-    if (levelProgression.started_at && levelProgression.passed_at) {
-      const completedAt = DateTime.fromISO(levelProgression.passed_at);
-      const startedAt = DateTime.fromISO(levelProgression.started_at);
-      return {
-        level: levelProgression.level,
-        daysToLevelUp: completedAt.diff(startedAt, "days").days,
-        completedAt: completedAt.toString(),
-        startedAt: startedAt.toString(),
-        time: completedAt.toLocal().valueOf()
-      };
-    } else {
-      const startedAt = levelProgression.started_at
-        ? DateTime.fromISO(levelProgression.started_at)
-        : DateTime.utc();
-      return {
-        level: levelProgression.level,
-        startedAt: startedAt.toString(),
-        daysToLevelUp: 0,
-        completedAt: undefined,
-        time: 0
-      };
-    }
-  });
-  const averageLevelUpInDays =
-    formattedData.reduce((acc, curr) => {
-      if (curr && curr.daysToLevelUp) {
-        return acc + curr.daysToLevelUp;
-      }
-      return acc;
-    }, 0) / formattedData.length;
-  formattedData.sort((a, b) => {
-    if (a && b) {
-      return a.level - b.level;
-    }
-    return 0;
-  });
-  formattedData[formattedData.length - 1] = {
-    ...formattedData[formattedData.length - 1],
-
-    daysToLevelUp: averageLevelUpInDays,
-    completedAt: DateTime.fromISO(
-      formattedData[formattedData.length - 1].startedAt
-    )
-      .plus({ days: averageLevelUpInDays })
-      .toString(),
-    time: DateTime.fromISO(formattedData[formattedData.length - 1].startedAt)
-      .plus({ days: averageLevelUpInDays })
-      .toLocal()
-      .valueOf()
-  };
+  const levelProgressions: LevelProgression[] = unwrapCollectionWrapper(data);
+  const filteredLevelProgressions: LevelProgression[] = filterLevelProgressions(
+    levelProgressions,
+    targetLevel,
+    mostRecentResetTimeStamp
+  );
+  const formattedData: ChartData[] = formatLevelProgressions(
+    filteredLevelProgressions
+  );
+  const averageLevelUpInDays: number = getAverageLevelUpInDays(formattedData);
+  const medianLevelUpInDays: number = getMedianLevelUpInDays(formattedData);
+  const projections: { days: number; type: "average" | "median" }[] = [
+    { days: averageLevelUpInDays, type: "average" },
+    { days: medianLevelUpInDays, type: "median" }
+  ];
+  // const optimalLevelUpInDays: number = getOptimalLevelUpInDays()
+  // const goalLevelUpInDays: number = getUserGoalLevelUpInDays()
   // sorted up to max level completed
-  const formattedDataWithProjections = [...formattedData];
-  for (let i = formattedDataWithProjections.length; i <= 60; i++) {
-    const previousLevelData = formattedDataWithProjections[i - 1];
-    const previousCompletedAt =
-      previousLevelData && previousLevelData.completedAt
-        ? previousLevelData.completedAt
-        : "";
-    const levelData = {
+  const averageProjection = [...[formattedData[formattedData.length - 1]]];
+  const medianProjection = [...[formattedData[formattedData.length - 1]]];
+  let previousAverageIdx = 0;
+  let previousMedianIdx = 0;
+  for (let i = formattedData.length; i <= 60; i++) {
+    const previousAverageProjection = averageProjection[previousAverageIdx];
+    const previousMedianProject = medianProjection[previousMedianIdx];
+    averageProjection.push({
       level: i,
-      daysToLevelUp: averageLevelUpInDays,
-      startedAt: previousLevelData.completedAt as string,
-      completedAt: DateTime.fromISO(previousCompletedAt)
+      startedAt: previousAverageProjection.completedAt,
+      completedAt: previousAverageProjection.completedAt.plus({
+        days: projections[0].days
+      }),
+      timeaverage: previousAverageProjection.completedAt
         .plus({
-          days: averageLevelUpInDays
+          days: projections[0].days
         })
-        .toString(),
-      time: DateTime.fromISO(previousCompletedAt)
-        .plus({
-          days: averageLevelUpInDays
-        })
-        .toLocal()
         .valueOf(),
-      projectType: "average"
-    };
-    formattedDataWithProjections.push(levelData);
+      type: projections[0].type
+    });
+
+    medianProjection.push({
+      level: i,
+      startedAt: previousMedianProject.completedAt,
+      completedAt: previousMedianProject.completedAt.plus({
+        days: projections[1].days
+      }),
+      timemedian: previousMedianProject.completedAt
+        .plus({
+          days: projections[1].days
+        })
+        .valueOf(),
+      type: projections[1].type
+    });
+    previousAverageIdx++;
+    previousMedianIdx++;
+
+    // const levelData = {
+    //   level: i,
+    //   startedAt: previousLevelData.completedAt,
+    //   completedAt: previousLevelData.completedAt.plus({
+    //     days: projection.days
+    //   }),
+
+    //   [`time${projection.type}`]: previousLevelData.completedAt
+    //     .plus({ days: projection.days })
+    //     .valueOf(),
+    //   type: projection.type
+    // };
   }
-  const timeVal = DateTime.fromMillis(formattedDataWithProjections[0].time);
-  console.log(timeVal);
-  const f = { month: "short", day: "numeric", year: "numeric" };
-  const varsa = timeVal.setLocale("en-US").toLocaleString(f);
-  console.log(varsa);
-  debugger;
+  // const timeVal = DateTime.fromMillis(formattedDataWithProjections[0].time);
+  // const f = { month: "short", day: "numeric", year: "numeric" };
+  // const varsa = timeVal.setLocale("en-US").toLocaleString(f);
+  formattedData.pop();
+  averageProjection.shift();
+  medianProjection.shift();
+  const formattedDataWithProjections = [
+    ...formattedData,
+    ...averageProjection,
+    ...medianProjection
+  ];
+  console.log(formattedDataWithProjections.length, "full data set length");
   return { formattedDataWithProjections, averageLevelUpInDays };
 };
 
@@ -241,7 +318,27 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
     targetLevel,
     originalLevel
   });
-  console.log(formattedDataWithProjections);
+  console.log("formatted projections", formattedDataWithProjections);
+  // console.log(
+  //   "TIME",
+  //   formattedDataWithProjections.map(element => {
+  //     if (element.timemedian) {
+  //       return DateTime.fromMillis(element.timemedian).toString();
+  //     } else if (element.timeaverage) {
+  //       return DateTime.fromMillis(element.timeaverage).toString();
+  //     } else if (element.time) {
+  //       return DateTime.fromMillis(element.time).toString();
+  //     } else {
+  //       return "wtf";
+  //     }
+  //   })
+  // );
+  const ticks = [
+    DateTime.utc(2019, 5, 15, 8, 30).valueOf(),
+    DateTime.utc(2019, 10, 15, 8, 30).valueOf(),
+    DateTime.utc(2019, 12, 15, 8, 30).valueOf(),
+    DateTime.utc(2020, 2, 30, 8, 30).valueOf()
+  ];
   return (
     <div>
       <ResponsiveContainer width={"95%"} height={500}>
@@ -249,20 +346,21 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
           <CartesianGrid strokeDasharray="3 3" />
 
           <XAxis
-            dataKey="time"
             type="number"
-            domain={["auto", "auto"]}
             scale="time"
+            ticks={ticks}
             tickFormatter={unixTime => {
-              const timeVal = DateTime.fromMillis(unixTime);
-              const f = { month: "short", day: "numeric", year: "numeric" };
-              return timeVal.setLocale("en-US").toLocaleString(f);
+              console.log(unixTime);
+              console.log(DateTime.fromMillis(unixTime).toString());
+              return DateTime.fromMillis(unixTime).toString();
             }}
           />
           <YAxis dataKey="level" />
           <Tooltip />
           <Legend />
-          <Line type="monotone" dataKey="level" stroke="#8884d8" />
+          <Line type="monotone" dataKey="timemedian" stroke="yellow" />
+          <Line type="monotone" dataKey="time" stroke="blue" />
+          <Line type="monotone" dataKey={"timeaverage"} stroke="orange" />
         </LineChart>
       </ResponsiveContainer>
     </div>
