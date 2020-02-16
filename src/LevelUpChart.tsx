@@ -71,6 +71,7 @@ const unwrapCollectionWrapper = <T extends unknown>(
 const getAverageLevelUpInDays = (obj: ChartData[]): number => {
   return (
     obj.reduce<number>((acc, curr) => {
+      debugger;
       if (curr && curr.timeToLeveUp) {
         return acc + curr.timeToLeveUp.days;
       }
@@ -90,9 +91,10 @@ const formatLevelProgressions = (
     const completedAt = levelProgression.passed_at
       ? DateTime.fromISO(levelProgression.passed_at)
       : placeHolderDateTime;
+    debugger;
     return {
       level: levelProgression.level,
-      timeToLeveUp: completedAt.diff(startedAt),
+      timeToLeveUp: completedAt.diff(startedAt, "days"),
       completedAt: completedAt,
       startedAt: startedAt,
       type: "recorded",
@@ -196,11 +198,13 @@ const analyzeLevelProgressions = (
     filteredLevelProgressions
   );
   const averageLevelUpInDays: number = getAverageLevelUpInDays(formattedData);
+  console.log(averageLevelUpInDays);
   const medianLevelUpInDays: number = getMedianLevelUpInDays(formattedData);
   const projections: { days: number; type: "average" | "median" }[] = [
     { days: averageLevelUpInDays, type: "average" },
     { days: medianLevelUpInDays, type: "median" }
   ];
+  console.log(projections);
   // const optimalLevelUpInDays: number = getOptimalLevelUpInDays()
   // const goalLevelUpInDays: number = getUserGoalLevelUpInDays()
   // sorted up to max level completed
@@ -333,32 +337,38 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
   //     }
   //   })
   // );
-  const ticks = [
-    DateTime.utc(2019, 5, 15, 8, 30).valueOf(),
-    DateTime.utc(2019, 10, 15, 8, 30).valueOf(),
-    DateTime.utc(2019, 12, 15, 8, 30).valueOf(),
-    DateTime.utc(2020, 2, 30, 8, 30).valueOf()
-  ];
+  // const ticks = [
+  //   DateTime.utc(2019, 5, 15, 8, 30).valueOf(),
+  //   DateTime.utc(2019, 10, 15, 8, 30).valueOf(),
+  //   DateTime.utc(2019, 12, 15, 8, 30).valueOf(),
+  //   DateTime.utc(2020, 2, 30, 8, 30).valueOf()
+  // ];
   return (
     <div>
       <ResponsiveContainer width={"95%"} height={500}>
         <LineChart data={formattedDataWithProjections}>
           <CartesianGrid strokeDasharray="3 3" />
 
-          <XAxis
+          <YAxis
             type="number"
             scale="time"
-            ticks={ticks}
-            tickFormatter={unixTime => {
-              console.log(unixTime);
-              console.log(DateTime.fromMillis(unixTime).toString());
-              return DateTime.fromMillis(unixTime).toString();
+            dataKey={obj => {
+              if (obj.timemedian) {
+                return obj.timemedian;
+              } else if (obj.timeaverage) {
+                return obj.timeaverage;
+              } else if (obj.time) {
+                return obj.time;
+              }
+              debugger;
+              return [obj.time, obj.level];
             }}
+            domain={["auto", "auto"]}
           />
-          <YAxis dataKey="level" />
+          <XAxis type="number" dataKey="level" />
           <Tooltip />
           <Legend />
-          <Line type="monotone" dataKey="timemedian" stroke="yellow" />
+          <Line type="monotone" dataKey={"timemedian"} stroke="yellow" />
           <Line type="monotone" dataKey="time" stroke="blue" />
           <Line type="monotone" dataKey={"timeaverage"} stroke="orange" />
         </LineChart>
