@@ -43,6 +43,12 @@ export interface WanikaniCollectionWrapper<T> {
   data: T;
 }
 
+export const unwrapCollectionWrapper = <T extends unknown>(
+  wrappedData: WanikaniCollectionWrapper<T>[]
+): T[] => {
+  return wrappedData.map<T>(wrappedElement => wrappedElement.data);
+};
+
 const isLocalStoragePayload = <T extends unknown>(
   obj: any
 ): obj is LocalStoragePayload<T> => {
