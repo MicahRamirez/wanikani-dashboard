@@ -142,13 +142,11 @@ export const analyzeLevelProgressions = (
     filteredLevelProgressions
   );
   const averageLevelUpInDays: number = getAverageLevelUpInDays(formattedData);
-  console.log(averageLevelUpInDays);
   const medianLevelUpInDays: number = getMedianLevelUpInDays(formattedData);
   const projections: { days: number; type: "average" | "median" }[] = [
     { days: averageLevelUpInDays, type: "average" },
     { days: medianLevelUpInDays, type: "median" }
   ];
-  console.log(projections);
   // const optimalLevelUpInDays: number = getOptimalLevelUpInDays()
   // const goalLevelUpInDays: number = getUserGoalLevelUpInDays()
 
