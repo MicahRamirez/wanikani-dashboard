@@ -98,6 +98,7 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
           <Line type="natural" dataKey={"averageLevel"} stroke="green" />
           <Line type="natural" dataKey="level" stroke="blue" />
           <Line type="natural" dataKey={"medianLevel"} stroke="orange" />
+          <Line type="natural" dataKey="optimalLevel" stroke="red" />
         </LineChart>
       </ResponsiveContainer>
     </div>

@@ -1,5 +1,7 @@
 import { DateTime, Duration } from "luxon";
 import { WanikaniCollectionWrapper, unwrapCollectionWrapper } from "./useWKApi";
+import { calculateOptimalLevelUp } from "./optimalLevelUp";
+import { FAST_LEVELS } from "./constants";
 
 import { Reset, LevelProgression } from "./wanikaniTypes";
 
@@ -11,7 +13,8 @@ export interface ChartData {
   time: number; // ms since epoch
   averageLevel?: number;
   medianLevel?: number;
-  type: "average" | "recorded" | "median";
+  optimalLevel?: number;
+  type: "average" | "recorded" | "median" | "optimal" | "userpace";
 }
 
 const getAverageLevelUpInDays = (obj: ChartData[]): number => {
@@ -143,30 +146,47 @@ export const analyzeLevelProgressions = (
   );
   const averageLevelUpInDays: number = getAverageLevelUpInDays(formattedData);
   const medianLevelUpInDays: number = getMedianLevelUpInDays(formattedData);
-  const projections: { days: number; type: "average" | "median" }[] = [
-    { days: averageLevelUpInDays, type: "average" },
-    { days: medianLevelUpInDays, type: "median" }
+  const { optimalLongInDays, optimalShortInDays } = calculateOptimalLevelUp();
+  const projections: {
+    days: { normal: number; accelerated: number };
+    type: "average" | "median" | "optimal" | "recorded";
+  }[] = [
+    {
+      days: { normal: averageLevelUpInDays, accelerated: averageLevelUpInDays },
+      type: "average"
+    },
+    {
+      days: { normal: medianLevelUpInDays, accelerated: medianLevelUpInDays },
+      type: "median"
+    },
+    {
+      days: { normal: optimalLongInDays, accelerated: optimalShortInDays },
+      type: "optimal"
+    }
   ];
-  // const optimalLevelUpInDays: number = getOptimalLevelUpInDays()
-  // const goalLevelUpInDays: number = getUserGoalLevelUpInDays()
+  // TODO
+  // userPaceProjection
+  // userGoalProjection
 
-  // sorted up to max level completed
   const averageProjection = [...[formattedData[formattedData.length - 1]]];
   const medianProjection = [...[formattedData[formattedData.length - 1]]];
+  const optimalProjection = [...[formattedData[formattedData.length - 1]]];
   let previousAverageIdx = 0;
   let previousMedianIdx = 0;
+  let previousOptimalIdx = 0;
   for (let i = formattedData.length; i <= 60; i++) {
     const previousAverageProjection = averageProjection[previousAverageIdx];
-    const previousMedianProject = medianProjection[previousMedianIdx];
+    const previousMedianProjection = medianProjection[previousMedianIdx];
+    const previousOptimalProjection = optimalProjection[previousOptimalIdx];
     averageProjection.push({
       averageLevel: i,
       startedAt: previousAverageProjection.completedAt,
       completedAt: previousAverageProjection.completedAt.plus({
-        days: projections[0].days
+        days: projections[0].days.normal
       }),
       time: previousAverageProjection.completedAt
         .plus({
-          days: projections[0].days
+          days: projections[0].days.normal
         })
         .valueOf(),
       type: projections[0].type
@@ -174,28 +194,49 @@ export const analyzeLevelProgressions = (
 
     medianProjection.push({
       medianLevel: i,
-      startedAt: previousMedianProject.completedAt,
-      completedAt: previousMedianProject.completedAt.plus({
-        days: projections[1].days
+      startedAt: previousMedianProjection.completedAt,
+      completedAt: previousMedianProjection.completedAt.plus({
+        days: projections[1].days.normal
       }),
-      time: previousMedianProject.completedAt
+      time: previousMedianProjection.completedAt
         .plus({
-          days: projections[1].days
+          days: projections[1].days.normal
         })
         .valueOf(),
       type: projections[1].type
     });
+    optimalProjection.push({
+      optimalLevel: i,
+      startedAt: previousOptimalProjection.completedAt,
+      completedAt: previousOptimalProjection.completedAt.plus({
+        days: FAST_LEVELS[i]
+          ? projections[2].days.accelerated
+          : projections[2].days.normal
+      }),
+      time: previousOptimalProjection.completedAt
+        .plus({
+          days: FAST_LEVELS[i]
+            ? projections[2].days.accelerated
+            : projections[2].days.normal
+        })
+        .valueOf(),
+      type: projections[2].type
+    });
     previousAverageIdx++;
     previousMedianIdx++;
+    previousOptimalIdx++;
   }
   formattedData.pop();
   averageProjection.shift();
   medianProjection.shift();
+  optimalProjection.shift();
   const formattedDataWithProjections = [
     ...formattedData,
     ...averageProjection,
-    ...medianProjection
+    ...medianProjection,
+    ...optimalProjection
   ];
   console.log(formattedDataWithProjections.length, "full data set length");
+  console.log(formattedDataWithProjections, "dataSet");
   return { formattedDataWithProjections, averageLevelUpInDays };
 };

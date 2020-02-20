@@ -1,13 +1,9 @@
-# Next.js with TypeScript example
+## Analytics and Insights for Progression on https://www.wanikani.com/
 
-## How to use
-
-Download the example [or clone the repo](https://github.com/mui-org/material-ui):
-
-```sh
-curl https://codeload.github.com/mui-org/material-ui/tar.gz/master | tar -xz --strip=2  material-ui-master/examples/nextjs-with-typescript
-cd nextjs-with-typescript
-```
+- Utilizes their api: https://docs.api.wanikani.com/20170710/
+- Uses nextjs universal rendering
+- Deployed on NextJS
+- TS Codebase
 
 Install it and run:
 
@@ -22,7 +18,3 @@ or
 yarn
 yarn dev
 ```
-
-## The idea behind the example
-
-[Next.js](https://github.com/zeit/next.js) is a framework for server-rendered React apps.
