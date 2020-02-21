@@ -10,13 +10,13 @@ import {
   LineChart,
   CartesianGrid
 } from "recharts";
-import { useWKApi } from "./useWKApi";
 import { DateTime } from "luxon";
 
 import {
   analyzeLevelProgressions,
   analyzeResetData
 } from "./levelUpProjectionUtils";
+import { useWKApi } from "./useWKApi";
 import { LevelProgression, Reset } from "./wanikaniTypes";
 
 const LEVEL_PROGRESSIONS_API_URL =
@@ -44,6 +44,56 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
     },
     apiKey
   );
+
+  // ignore level progressions between targetLevel and originalLevel after the mostRecentReset timestamp (USED TO FILTER)
+  const {
+    mostRecentResetTimeStamp,
+    targetLevel,
+    originalLevel
+  } = analyzeResetData(resetData);
+  const {
+    formattedDataWithProjections,
+    currentLevel
+  } = analyzeLevelProgressions(data, {
+    mostRecentResetTimeStamp,
+    targetLevel,
+    originalLevel
+  });
+  // if we know the current level then also fetch data to project current performance
+  const [
+    { data: currentKanjiSubjects, isLoading: subjectDataIsLoading }
+  ] = useWKApi<Subject>(
+    SUBJECTS_URL,
+    {
+      axiosConfig: {
+        method: "GET",
+        responseType: "json",
+        params: {
+          types: "kanji",
+          levels: `${currentLevel}`
+        }
+      },
+      localStorageDataKey: RESETS_LOCAL_STORAGE_KEY
+    },
+    apiKey
+  );
+  const [
+    { data: currentKanjiAssignments, isLoading: assignmentDataIsLoading }
+  ] = useWKApi<Assignment>(
+    ASSIGNMENTS_URL,
+    {
+      axiosConfig: {
+        method: "GET",
+        responseType: "json",
+        params: {
+          types: "kanji",
+          levels: `${currentLevel}`
+        }
+      },
+      localStorageDataKey: RESETS_LOCAL_STORAGE_KEY
+    },
+    apiKey
+  );
   if (
     isLoading ||
     resetDataIsLoading ||
@@ -52,17 +102,6 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
   ) {
     return <CircularProgress />;
   }
-  // ignore level progressions between targetLevel and originalLevel after the mostRecentReset timestamp (USED TO FILTER)
-  const {
-    mostRecentResetTimeStamp,
-    targetLevel,
-    originalLevel
-  } = analyzeResetData(resetData);
-  const { formattedDataWithProjections } = analyzeLevelProgressions(data, {
-    mostRecentResetTimeStamp,
-    targetLevel,
-    originalLevel
-  });
   return (
     <div>
       <ResponsiveContainer width={"95%"} height={500}>
