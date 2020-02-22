@@ -17,13 +17,15 @@ import {
   analyzeResetData
 } from "./levelUpProjectionUtils";
 import { useWKApi } from "./useWKApi";
-import { LevelProgression, Reset } from "./wanikaniTypes";
+import { LevelProgression, Reset, Assignment, Subject } from "./wanikaniTypes";
 
 const LEVEL_PROGRESSIONS_API_URL =
   "https://api.wanikani.com/v2/level_progressions";
 const LEVEL_PROGRESSION_LOCAL_STORAGE_KEY = "levelProgressions";
 const RESETS_API_URL = "https://api.wanikani.com/v2/resets";
 const RESETS_LOCAL_STORAGE_KEY = "resets";
+const SUBJECTS_URL = "https://api.wanikani.com/v2/subjects";
+const ASSIGNMENTS_URL = "https://api.wanikani.com/v2/assignments";
 
 export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
   // *should* yield all level progressions, including those from past resets
@@ -44,6 +46,14 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
     },
     apiKey
   );
+  if (
+    isLoading ||
+    resetDataIsLoading ||
+    data === undefined ||
+    resetData === undefined
+  ) {
+    return <CircularProgress />;
+  }
 
   // ignore level progressions between targetLevel and originalLevel after the mostRecentReset timestamp (USED TO FILTER)
   const {
@@ -72,8 +82,7 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
           types: "kanji",
           levels: `${currentLevel}`
         }
-      },
-      localStorageDataKey: RESETS_LOCAL_STORAGE_KEY
+      }
     },
     apiKey
   );
@@ -89,19 +98,19 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
           types: "kanji",
           levels: `${currentLevel}`
         }
-      },
-      localStorageDataKey: RESETS_LOCAL_STORAGE_KEY
+      }
     },
     apiKey
   );
   if (
-    isLoading ||
-    resetDataIsLoading ||
-    data === undefined ||
-    resetData === undefined
+    assignmentDataIsLoading ||
+    subjectDataIsLoading ||
+    currentKanjiSubjects === undefined ||
+    currentKanjiAssignments === undefined
   ) {
     return <CircularProgress />;
   }
+
   return (
     <div>
       <ResponsiveContainer width={"95%"} height={500}>
@@ -140,6 +149,13 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
           <Line type="natural" dataKey="optimalLevel" stroke="red" />
         </LineChart>
       </ResponsiveContainer>
+      <p>
+        <span>CURRENT KANJI SUBJECT</span>
+        {JSON.stringify(currentKanjiSubjects)}
+
+        <span>CURRENT KANJI ASSIGNMENT</span>
+        {JSON.stringify(currentKanjiAssignments)}
+      </p>
     </div>
   );
 };

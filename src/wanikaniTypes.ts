@@ -20,19 +20,23 @@ export interface AuxillaryMeaning {
   type: string; // Either whitelist or blacklist. When evaluating user input, whitelisted meanings are used to match for correctness. Blacklisted meanings are used to match for incorrectness.
 }
 
-	Array of objects	
-	String	
-created_at	Date	Timestamp when the subject was created.
-document_url	String	A URL pointing to the page on wanikani.com that provides detailed information about this subject.
-hidden_at	Date	Timestamp when the subject was hidden, indicating associated assignments will no longer appear in lessons or reviews and that the subject page is no longer visible on wanikani.com.
-lesson_position	Integer	The position that the subject appears in lessons. Note that the value is scoped to the level of the subject, so there are duplicate values across levels.
-level	Integer	The level of the subject, from 1 to 60.
-meaning_mnemonic	String	The subject's meaning mnemonic.
-meanings	Array of objects	The subject meanings. See table below for the object structure.
-slug	String	The string that is used when generating the document URL for the subject. Radicals use their meaning, downcased. Kanji and vocabulary use their characters.
+export interface SubjectMeaning {
+  meaning: string; // A singular subject meaning.
+  primary: boolean; //	Indicates priority in the WaniKani system.
+  accepted_answer: boolean; //	Indicates if the meaning is used to evaluate user input for correctness.
+}
+
 export interface Subject {
   auxiliary_meanings: AuxillaryMeaning[]; // Collection of auxiliary meanings. See table below for the object structure.
   characters: string; // The UTF-8 characters for the subject, including kanji and hiragana.
+  created_at: string; // Timestamp when the subject was created.
+  document_url: string; // A URL pointing to the page on wanikani.com that provides detailed information about this subject.
+  hidden_at: string; // Timestamp when the subject was hidden, indicating associated assignments will no longer appear in lessons or reviews and that the subject page is no longer visible on wanikani.com.
+  lesson_position: number; //The position that the subject appears in lessons. Note that the value is scoped to the level of the subject, so there are duplicate values across levels.
+  level: number; // The level of the subject, from 1 to 60.
+  meaning_mnemonic: string; // The subject's meaning mnemonic.
+  meanings: SubjectMeaning[]; // The subject meanings. See table below for the object structure.
+  slug: string; // The string that is used when generating the document URL for the subject. Radicals use their meaning, downcased. Kanji and vocabulary use their characters.
 }
 
 export interface Assignment {

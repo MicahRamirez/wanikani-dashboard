@@ -133,6 +133,7 @@ export const useWKApi = <T extends unknown>(
           url,
           axiosConfig
         );
+        debugger;
         const accumulatedData = [result.data.data];
         if (options.isPaginated && result.data.pages) {
           let nextPage = result.data.pages.next_url;

@@ -167,7 +167,8 @@ export const analyzeLevelProgressions = (
   // TODO
   // userPaceProjection
   // userGoalProjection
-
+  // sketch, but we know the last piece of data on this struct is defined
+  const currentLevel = formattedData[formattedData.length - 1].level as number;
   const averageProjection = [...[formattedData[formattedData.length - 1]]];
   const medianProjection = [...[formattedData[formattedData.length - 1]]];
   const optimalProjection = [...[formattedData[formattedData.length - 1]]];
@@ -238,5 +239,5 @@ export const analyzeLevelProgressions = (
   ];
   console.log(formattedDataWithProjections.length, "full data set length");
   console.log(formattedDataWithProjections, "dataSet");
-  return { formattedDataWithProjections, averageLevelUpInDays };
+  return { formattedDataWithProjections, averageLevelUpInDays, currentLevel };
 };
