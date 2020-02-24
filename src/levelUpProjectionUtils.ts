@@ -63,6 +63,9 @@ export const formatLevelProgressions = (
 export const analyzeResetData = (
   resetDataWrapper: WanikaniCollectionWrapper<Reset>[]
 ) => {
+  if (!resetDataWrapper) {
+    return {};
+  }
   const resetData = unwrapCollectionWrapper(resetDataWrapper);
   // starting at a time before WK conception
   let mostRecentReset = resetData[0];
@@ -76,8 +79,7 @@ export const analyzeResetData = (
   }
   return {
     mostRecentResetTimeStamp: mostRecentReset.confirmed_at,
-    targetLevel: mostRecentReset.target_level,
-    originalLevel: mostRecentReset.original_level
+    targetLevel: mostRecentReset.target_level
   };
 };
 
@@ -130,11 +132,13 @@ export const analyzeLevelProgressions = (
     mostRecentResetTimeStamp,
     targetLevel
   }: {
-    mostRecentResetTimeStamp: string;
-    targetLevel: number;
-    originalLevel: number;
+    mostRecentResetTimeStamp: string | undefined;
+    targetLevel: number | undefined;
   }
 ) => {
+  if (!data || !mostRecentResetTimeStamp || !targetLevel) {
+    return {};
+  }
   const levelProgressions: LevelProgression[] = unwrapCollectionWrapper(data);
   const filteredLevelProgressions: LevelProgression[] = filterLevelProgressions(
     levelProgressions,

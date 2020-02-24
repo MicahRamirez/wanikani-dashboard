@@ -12,6 +12,7 @@ export interface apiOptions {
   axiosConfig: AxiosRequestConfig;
   localStorageDataKey?: string;
   lastUpdated?: string;
+  skip?: boolean;
   mungeFunction?: Function; // needs to be able to handle undef data, single element, or array...
 }
 
@@ -88,7 +89,6 @@ export const useWKApi = <T extends unknown>(
             accumulatedData.push(result.data.data);
           }
         }
-        // **** TODO  just need to flatten the data structure in different cases and use the wrapper type*****
         // if data is nested due to pagination flatten
         const dataToSet = accumulatedData.reduce((acc, currentValue) => {
           return [...currentValue, ...acc];
@@ -105,8 +105,11 @@ export const useWKApi = <T extends unknown>(
       }
       setIsLoading(false);
     };
+    if (options.skip) {
+      return;
+    }
     // we want to utilize already requested data from LS if it is fresh enough for the specific API
-    if (options.localStorageDataKey) {
+    else if (options.localStorageDataKey) {
       const dataFromLocalStorage = getDataFromLocalStorage<T>(
         options.localStorageDataKey
       );
@@ -118,7 +121,7 @@ export const useWKApi = <T extends unknown>(
     } else {
       fetchData();
     }
-  }, [url]);
+  }, [url, options.skip]);
   return [
     {
       data: options.mungeFunction ? options.mungeFunction(data) : data,
