@@ -44,20 +44,6 @@ const isLocalStorageDataStructure = <T extends unknown>(
   );
 };
 
-const isWanikaniCollectionWrapper = <T extends unknown>(
-  obj: any
-): obj is WanikaniCollectionWrapper<T>[] => {
-  return (
-    obj &&
-    Array.isArray(obj) &&
-    typeof obj[0].id === "number" &&
-    typeof obj[0].object === "string" &&
-    typeof obj[0].url === "string" &&
-    typeof obj[0].url === "string" &&
-    typeof obj[0].data === "object"
-  );
-};
-
 const parseLocalStorageRoot = () => {
   if (!typeof Storage) {
     return;
@@ -93,28 +79,26 @@ export const setDataInLocalStorage = <T extends unknown>(
   data: WanikaniCollectionWrapper<T>[],
   localStorageDataKey: string
 ) => {
-  const localStorageRoot = parseLocalStorageRoot() as LocalStorageRoot;
-  const dataStructure = localStorageRoot.root[localStorageDataKey];
+  const localStorageRoot = parseLocalStorageRoot();
   const updatedAtUTC = DateTime.utc().toString();
-  console.log(localStorageRoot);
-  console.log(data);
-  if (isLocalStorageDataStructure<T>(dataStructure)) {
-    const localStoragePayload = { updatedAtUTC, data };
-    // so in the root struct, overwrite only the key that we are setting in the function parameter localStorageDataKey
-    const updatedRoot = {
-      root: {
-        ...localStorageRoot.root,
-        ...{ [localStorageDataKey]: localStoragePayload }
-      }
-    };
-    localStorage.setItem(localStorageDataKey, JSON.stringify(updatedRoot));
-  } else if (isWanikaniCollectionWrapper<T>(data)) {
+
+  if (!localStorageRoot) {
     const updatedRoot = {
       root: {
         [localStorageDataKey]: {
           updatedAtUTC,
           data
         }
+      }
+    };
+    localStorage.setItem(LOCALSTORAGE_ROOT, JSON.stringify(updatedRoot));
+  } else {
+    const localStoragePayload = { updatedAtUTC, data };
+    // so in the root struct, overwrite only the key that we are setting in the function parameter localStorageDataKey
+    const updatedRoot = {
+      root: {
+        ...localStorageRoot.root,
+        ...{ [localStorageDataKey]: localStoragePayload }
       }
     };
     localStorage.setItem(LOCALSTORAGE_ROOT, JSON.stringify(updatedRoot));
