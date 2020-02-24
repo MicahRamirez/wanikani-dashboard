@@ -17,15 +17,17 @@ import {
   analyzeResetData
 } from "./levelUpProjectionUtils";
 import { useWKApi } from "./useWKApi";
-import { LevelProgression, Reset, Assignment, Subject } from "./wanikaniTypes";
+import { LevelProgression, Reset } from "./wanikaniTypes";
 
 const LEVEL_PROGRESSIONS_API_URL =
   "https://api.wanikani.com/v2/level_progressions";
 const LEVEL_PROGRESSION_LOCAL_STORAGE_KEY = "levelProgressions";
 const RESETS_API_URL = "https://api.wanikani.com/v2/resets";
 const RESETS_LOCAL_STORAGE_KEY = "resets";
-const SUBJECTS_URL = "https://api.wanikani.com/v2/subjects";
-const ASSIGNMENTS_URL = "https://api.wanikani.com/v2/assignments";
+// const SUBJECTS_URL = "https://api.wanikani.com/v2/subjects";
+// const ASSIGNMENTS_URL = "https://api.wanikani.com/v2/assignments";
+// const SUBJECTS_LOCAL_STORAGE_KEY = "subjects";
+// const ASSIGNMENTS_LOCAL_STORAGE_KEY = "assignments";
 
 export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
   // *should* yield all level progressions, including those from past resets
@@ -61,55 +63,52 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
     targetLevel,
     originalLevel
   } = analyzeResetData(resetData);
-  const {
-    formattedDataWithProjections,
-    currentLevel
-  } = analyzeLevelProgressions(data, {
+  const { formattedDataWithProjections } = analyzeLevelProgressions(data, {
     mostRecentResetTimeStamp,
     targetLevel,
     originalLevel
   });
   // if we know the current level then also fetch data to project current performance
-  const [
-    { data: currentKanjiSubjects, isLoading: subjectDataIsLoading }
-  ] = useWKApi<Subject>(
-    SUBJECTS_URL,
-    {
-      axiosConfig: {
-        method: "GET",
-        responseType: "json",
-        params: {
-          types: "kanji",
-          levels: `${currentLevel}`
-        }
-      }
-    },
-    apiKey
-  );
-  const [
-    { data: currentKanjiAssignments, isLoading: assignmentDataIsLoading }
-  ] = useWKApi<Assignment>(
-    ASSIGNMENTS_URL,
-    {
-      axiosConfig: {
-        method: "GET",
-        responseType: "json",
-        params: {
-          types: "kanji",
-          levels: `${currentLevel}`
-        }
-      }
-    },
-    apiKey
-  );
-  if (
-    assignmentDataIsLoading ||
-    subjectDataIsLoading ||
-    currentKanjiSubjects === undefined ||
-    currentKanjiAssignments === undefined
-  ) {
-    return <CircularProgress />;
-  }
+  // const [
+  //   { data: currentKanjiSubjects, isLoading: subjectDataIsLoading }
+  // ] = useWKApi<Subject>(
+  //   SUBJECTS_URL,
+  //   {
+  //     axiosConfig: {
+  //       method: "GET",
+  //       responseType: "json",
+  //       params: {
+  //         types: "kanji",
+  //         levels: `${currentLevel}`
+  //       }
+  //     }
+  //   },
+  //   apiKey
+  // );
+  // const [
+  //   { data: currentKanjiAssignments, isLoading: assignmentDataIsLoading }
+  // ] = useWKApi<Assignment>(
+  //   ASSIGNMENTS_URL,
+  //   {
+  //     axiosConfig: {
+  //       method: "GET",
+  //       responseType: "json",
+  //       params: {
+  //         types: "kanji",
+  //         levels: `${currentLevel}`
+  //       }
+  //     }
+  //   },
+  //   apiKey
+  // );
+  // if (
+  //   assignmentDataIsLoading ||
+  //   subjectDataIsLoading ||
+  //   currentKanjiSubjects === undefined ||
+  //   currentKanjiAssignments === undefined
+  // ) {
+  //   return <CircularProgress />;
+  // }
 
   return (
     <div>
@@ -151,10 +150,10 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
       </ResponsiveContainer>
       <p>
         <span>CURRENT KANJI SUBJECT</span>
-        {JSON.stringify(currentKanjiSubjects)}
+        {/* {JSON.stringify(currentKanjiSubjects)} */}
 
         <span>CURRENT KANJI ASSIGNMENT</span>
-        {JSON.stringify(currentKanjiAssignments)}
+        {/* {JSON.stringify(currentKanjiAssignments)} */}
       </p>
     </div>
   );

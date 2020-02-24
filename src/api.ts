@@ -78,7 +78,6 @@ export const getAllReviewStatistics = async (apiKey: string) => {
       const queryStringParms = qs.parse(
         nextUrl.slice(nextUrl.lastIndexOf("?") + 1)
       );
-      debugger;
       if (!isWanikaniPageUrl(queryStringParms)) {
         return;
       }
