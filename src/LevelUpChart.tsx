@@ -23,12 +23,16 @@ const LEVEL_PROGRESSIONS_API_URL =
   "https://api.wanikani.com/v2/level_progressions";
 const LEVEL_PROGRESSION_LOCAL_STORAGE_KEY = "levelProgressions";
 const RESETS_API_URL = "https://api.wanikani.com/v2/resets";
-const RESETS_LOCAL_STORAGE_KEY = "resets";
 const SUBJECTS_URL = "https://api.wanikani.com/v2/subjects";
 const ASSIGNMENTS_URL = "https://api.wanikani.com/v2/assignments";
 const SUBJECTS_LOCAL_STORAGE_KEY = "subjects";
 const ASSIGNMENTS_LOCAL_STORAGE_KEY = "assignments";
+const RESETS_LOCAL_STORAGE_KEY = "resets";
 
+/**
+ *  This chart now has a lot of state, lots of API calls, etc... After it's complete it would be nice to pull up all API calls
+ *
+ */
 export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
   // *should* yield all level progressions, including those from past resets
   const [{ data, isLoading }] = useWKApi<LevelProgression>(
@@ -103,12 +107,18 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
   if (
     isLoading ||
     resetDataIsLoading ||
-    data === undefined ||
-    resetData === undefined
+    assignmentDataIsLoading ||
+    subjectDataIsLoading ||
+    !data ||
+    !resetData ||
+    !currentKanjiAssignments ||
+    !currentKanjiSubjects
   ) {
     return <CircularProgress />;
   }
-
+  // Mean: What is the average level up time
+  // Median: What is the time of the average level up
+  // Optimal: Given your current pace on the current level
   return (
     <div>
       <ResponsiveContainer width={"95%"} height={500}>
@@ -141,9 +151,9 @@ export const LevelUpChart: React.FC<{ apiKey: string }> = ({ apiKey }) => {
           />
           <Tooltip />
           <Legend />
-          <Line type="natural" dataKey={"averageLevel"} stroke="green" />
+          <Line type="natural" dataKey="averageLevel" stroke="green" />
           <Line type="natural" dataKey="level" stroke="blue" />
-          <Line type="natural" dataKey={"medianLevel"} stroke="orange" />
+          <Line type="natural" dataKey="medianLevel" stroke="orange" />
           <Line type="natural" dataKey="optimalLevel" stroke="red" />
         </LineChart>
       </ResponsiveContainer>

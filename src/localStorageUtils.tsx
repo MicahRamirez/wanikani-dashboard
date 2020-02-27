@@ -24,7 +24,7 @@ export interface WanikaniCollectionWrapper<T> {
 }
 
 interface DataStructure<T> {
-  updatedAtUTC: string;
+  modifiedSince: string;
   data: WanikaniCollectionWrapper<T>[];
 }
 
@@ -40,7 +40,7 @@ const isLocalStorageDataStructure = <T extends unknown>(
   obj: any
 ): obj is DataStructure<T> => {
   return (
-    obj && typeof obj.data === "object" && typeof obj.updatedAtUTC === "string"
+    obj && typeof obj.data === "object" && typeof obj.modifiedSince === "string"
   );
 };
 
@@ -80,20 +80,22 @@ export const setDataInLocalStorage = <T extends unknown>(
   localStorageDataKey: string
 ) => {
   const localStorageRoot = parseLocalStorageRoot();
-  const updatedAtUTC = DateTime.utc().toString();
+  const modifiedSince = DateTime.utc().toHTTP();
 
+  // creating the LS data structure for the first time
   if (!localStorageRoot) {
     const updatedRoot = {
       root: {
         [localStorageDataKey]: {
-          updatedAtUTC,
+          modifiedSince,
           data
         }
       }
     };
     localStorage.setItem(LOCALSTORAGE_ROOT, JSON.stringify(updatedRoot));
+    // updating the LS data struture for the specific key
   } else {
-    const localStoragePayload = { updatedAtUTC, data };
+    const localStoragePayload = { modifiedSince, data };
     // so in the root struct, overwrite only the key that we are setting in the function parameter localStorageDataKey
     const updatedRoot = {
       root: {
