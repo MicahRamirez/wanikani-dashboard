@@ -83,3 +83,16 @@ export const SRS_STAGES = [
     accelerated_interval: 0
   }
 ];
+
+// API URLS
+export const LEVEL_PROGRESSIONS_API_URL =
+  "https://api.wanikani.com/v2/level_progressions";
+export const RESETS_API_URL = "https://api.wanikani.com/v2/resets";
+export const SUBJECTS_URL = "https://api.wanikani.com/v2/subjects";
+export const ASSIGNMENTS_URL = "https://api.wanikani.com/v2/assignments";
+
+// LOCAL STORAGE KEYS
+export const LEVEL_PROGRESSION_LOCAL_STORAGE_KEY = "levelProgressions";
+export const SUBJECTS_LOCAL_STORAGE_KEY = "subjects";
+export const ASSIGNMENTS_LOCAL_STORAGE_KEY = "assignments";
+export const RESETS_LOCAL_STORAGE_KEY = "resets";

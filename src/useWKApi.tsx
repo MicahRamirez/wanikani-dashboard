@@ -89,30 +89,10 @@ export const useWKApi = <T extends unknown>(
             }
           }
         };
-        console.log(axiosConfig);
         let result: AxiosResponse<WanikaniApiResponse<T>> = await axios(
           url,
           axiosConfig
         );
-        console.log("RESULT", result);
-        console.log("HEADERS", result.headers);
-        // data not modified
-        if (result.status === 304) {
-          console.log("RECEIVED 304!!!");
-          // setData with what was in local storage
-          setIsLoading(false);
-          const dataFromLocalStorage = getDataFromLocalStorage<T>(
-            options.localStorageDataKey
-          );
-          if (dataFromLocalStorage) {
-            setData(dataFromLocalStorage.data);
-          } else {
-            console.error(
-              "Received 304 from WK, yet data from LS was unknown. Cache error."
-            );
-          }
-          return;
-        }
         const accumulatedData = [result.data.data];
         if (options.isPaginated && result.data.pages) {
           let nextPage = result.data.pages.next_url;
@@ -131,8 +111,9 @@ export const useWKApi = <T extends unknown>(
         );
         setData(dataToSet as WanikaniCollectionWrapper<T>[]);
       } catch (error) {
+        // WK Api will return 304s when data has not been updated
+        // catch here and set data that exists in local storage
         if (JSON.stringify(error.message).includes("304")) {
-          console.log("HANDLED THE ERROR");
           setIsLoading(false);
           const dataFromLocalStorage = getDataFromLocalStorage<T>(
             options.localStorageDataKey
@@ -140,6 +121,10 @@ export const useWKApi = <T extends unknown>(
           if (dataFromLocalStorage) {
             setData(dataFromLocalStorage.data);
             return;
+          } else {
+            console.error("Received 304 from WK API, but data DNE in LS");
+            // TODO: rethrow error to be caught by global error handler
+            // global error because our cache (LS) does not reflect what it should
           }
         }
         setIsError(true);
@@ -153,7 +138,8 @@ export const useWKApi = <T extends unknown>(
     }
     // data is cached in LS
     else if (options.localStorageDataKey) {
-      // attempt to obtain cached data, which includes the ETag if it exists
+      // TODO: think about passing in the full data structure from LS as it is needed to set
+      // in react state if a 304 is received
       const dataFromLocalStorage = getDataFromLocalStorage<T>(
         options.localStorageDataKey
       );

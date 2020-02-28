@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import Container from "@material-ui/core/Container";
 
-import { LevelUpChart } from "../src/LevelUpChart";
 import { ApiKeyForm } from "../src/ApiKeyForm";
+import { Projections } from "../src/Projections";
 
 const API_KEY_LOCAL_STORAGE = "apiKey";
 
@@ -27,7 +27,8 @@ export default function Index() {
     <Container>
       {`Your api key ${apiKey}`}
       {!apiKey && <ApiKeyForm saveApiKey={saveApiKey} />}
-      {apiKey && <LevelUpChart apiKey={apiKey} />}
+
+      {apiKey && <Projections apiKey={apiKey} />}
     </Container>
   );
 }
