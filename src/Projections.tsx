@@ -1,6 +1,8 @@
 import React from "react";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import Paper from "@material-ui/core/Paper";
+import { makeStyles } from "@material-ui/core/styles";
+import Grid from "@material-ui/core/Grid";
 
 import {
   analyzeLevelProgressions,
@@ -19,6 +21,14 @@ import {
   RESETS_LOCAL_STORAGE_KEY
 } from "./constants";
 import { LevelUpChart } from "./LevelUpChart";
+
+const useStyles = makeStyles(_ => ({
+  root: {
+    flexGrow: 1
+  }
+}));
+
+// const Tiles = () => {};
 
 export const Projections = ({ apiKey }: { apiKey: string }) => {
   // *should* yield all level progressions, including those from past resets
@@ -85,6 +95,8 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
     },
     apiKey
   );
+  const classes = useStyles();
+
   if (
     isLoading ||
     resetDataIsLoading ||
@@ -98,13 +110,25 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
   ) {
     return <CircularProgress />;
   }
+
   return (
-    <div>
-      Current Level Stats
-      <Paper elevation={3}>Fastest time to level up</Paper>
-      <Paper elevation={3}>Estimated time to level up</Paper>
-      <Paper elevation={3}>Average Accuracy of Current Level Kanji</Paper>
-      <LevelUpChart chartData={formattedDataWithProjections} />
+    <div className={classes.root}>
+      <Grid container spacing={3}>
+        <Grid container item xs={12} spacing={10}>
+          <Grid item xs={4} spacing={1}>
+            <Paper elevation={3}>Fastest time to level up</Paper>
+          </Grid>
+          <Grid item xs={4} spacing={1}>
+            <Paper elevation={3}>Estimated time to level up</Paper>
+          </Grid>
+          <Grid item xs={4} spacing={1}>
+            <Paper elevation={3}>Average Accuracy of Current Level Kanji</Paper>
+          </Grid>
+        </Grid>
+        <Grid item xs={12}>
+          <LevelUpChart chartData={formattedDataWithProjections} />
+        </Grid>
+      </Grid>
     </div>
   );
 };
