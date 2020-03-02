@@ -46,10 +46,12 @@ const calculateFastestLevelUpTime = (
       },
       { kanji: [], radical: [] }
     );
+  debugger;
   const kanjiSubjects = unwrapCollectionWrapper(wrappedKanjiSubjects);
   const levelUpRequirement = Math.ceil(kanjiSubjects.length * 0.9);
   // when there aren't enough kanji assignments to level up we need to look at radicals (harder case)
   if (levelUpAssignments.kanji.length < levelUpRequirement) {
+    debugger;
     // look at each radical and its srs level
     // for an srs level what's the remaining time to completion (in seconds)
     // radical -> remaining time left
@@ -58,22 +60,22 @@ const calculateFastestLevelUpTime = (
     // so take all radicals closest to level up
     //    with these do they unlock enough kanji to meet the level requirement? if yes
     // upon completion
-  } else {
-    // we have enough kanji unlocked start at the highest srs level
-    // group all kanji by srs level and sort by available at in each grouping
-    // kanjiGuruedSoFar: number
-    // totalRequiredTime: number (seconds?)
-    // for srs levels starting at GURU - 1 to Apprentice 1:
-    //    timeToAddForSrsLevel = 0
-    //    for each kanji in a srs level
-    //      set potentialTime to currentKanji.available_at - now
-    //      kanjiGuruedSoFar + 1;
-    //      if kanjiGuruedSoFar < levelUpRequirement
-    //        subtract
-    //
-    // add timeSoFar + time
-    // at Guru - 1 levels add up number of kanji. Does current Guru'ed kanji + Guru - 1 level kanji >= level requirement?
   }
+  // we have enough kanji unlocked start at the highest srs level
+  // group all kanji by srs level and sort by available at in each grouping
+  // kanjiGuruedSoFar: number
+  // totalRequiredTime: number (seconds?)
+  // for srs levels starting at GURU - 1 to Apprentice 1:
+  //    timeToAddForSrsLevel = 0
+  //    for each kanji in a srs level
+  //      set potentialTime to currentKanji.available_at - now
+  //      kanjiGuruedSoFar + 1;
+  //      if kanjiGuruedSoFar >= levelUpRequirement
+  //        add potentialTime
+  //        break;
+  //
+  // add timeSoFar + time
+  // at Guru - 1 levels add up number of kanji. Does current Guru'ed kanji + Guru - 1 level kanji >= level requirement?
 
   console.log("required kanji for level up", levelUpRequirement);
   console.log("subjects", kanjiSubjects);
@@ -135,6 +137,8 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
     },
     apiKey
   );
+  console.log("currentLevel", currentLevel);
+  console.log(currentKanjiSubjects);
   const [
     { data: levelUpAssignments, isLoading: assignmentDataIsLoading }
   ] = useWKApi<Assignment>(
