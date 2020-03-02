@@ -1,5 +1,6 @@
 import React from "react";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import LinearProgress from "@material-ui/core/LinearProgress";
 import Paper from "@material-ui/core/Paper";
 import { makeStyles } from "@material-ui/core/styles";
 import Grid from "@material-ui/core/Grid";
@@ -46,12 +47,10 @@ const calculateFastestLevelUpTime = (
       },
       { kanji: [], radical: [] }
     );
-  debugger;
   const kanjiSubjects = unwrapCollectionWrapper(wrappedKanjiSubjects);
   const levelUpRequirement = Math.ceil(kanjiSubjects.length * 0.9);
   // when there aren't enough kanji assignments to level up we need to look at radicals (harder case)
   if (levelUpAssignments.kanji.length < levelUpRequirement) {
-    debugger;
     // look at each radical and its srs level
     // for an srs level what's the remaining time to completion (in seconds)
     // radical -> remaining time left
@@ -120,18 +119,19 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
   });
   // if we know the current level then also fetch data to project current performance
   const [
-    { data: currentKanjiSubjects, isLoading: subjectDataIsLoading }
+    {
+      data: currentKanjiSubjects,
+      isLoading: subjectDataIsLoading,
+      progress: subjectProgress
+    }
   ] = useWKApi<Subject>(
     SUBJECTS_URL,
     {
+      isPaginated: true,
       skip: currentLevel === undefined,
       axiosConfig: {
         method: "GET",
-        responseType: "json",
-        params: {
-          types: "kanji",
-          levels: `${currentLevel}`
-        }
+        responseType: "json"
       },
       localStorageDataKey: SUBJECTS_LOCAL_STORAGE_KEY
     },
@@ -140,18 +140,19 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
   console.log("currentLevel", currentLevel);
   console.log(currentKanjiSubjects);
   const [
-    { data: levelUpAssignments, isLoading: assignmentDataIsLoading }
+    {
+      data: levelUpAssignments,
+      isLoading: assignmentDataIsLoading,
+      progress: assignmentProgress
+    }
   ] = useWKApi<Assignment>(
     ASSIGNMENTS_URL,
     {
+      isPaginated: true,
       skip: currentLevel === undefined,
       axiosConfig: {
         method: "GET",
-        responseType: "json",
-        params: {
-          types: "kanji",
-          levels: `${currentLevel}`
-        }
+        responseType: "json"
       },
       localStorageDataKey: ASSIGNMENTS_LOCAL_STORAGE_KEY
     },
@@ -174,7 +175,17 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
     !currentKanjiSubjects ||
     !formattedDataWithProjections
   ) {
-    return <CircularProgress />;
+    console.log("Subject Progress", subjectProgress.percentage);
+    console.log("Assignment Progress", assignmentProgress.percentage);
+    return (
+      <div>
+        <span>Subject Progress</span>
+        <LinearProgress value={subjectProgress.percentage} />
+        <span>Assignment Progress</span>
+        <LinearProgress value={assignmentProgress.percentage} />
+        <CircularProgress />
+      </div>
+    );
   }
 
   return (

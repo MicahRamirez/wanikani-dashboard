@@ -1,4 +1,5 @@
 import { DateTime } from "luxon";
+import LZString from "lz-string";
 
 const LOCALSTORAGE_ROOT = "root";
 
@@ -58,7 +59,9 @@ const parseLocalStorageRoot = () => {
   }
 
   try {
-    return JSON.parse(localStorageRoot) as LocalStorageRoot;
+    return JSON.parse(
+      LZString.decompressFromUTF16(localStorageRoot)
+    ) as LocalStorageRoot;
   } catch (error) {
     console.error("Unable to parse local storage values");
     return rootStructure;
@@ -92,7 +95,10 @@ export const setDataInLocalStorage = <T extends unknown>(
         }
       }
     };
-    localStorage.setItem(LOCALSTORAGE_ROOT, JSON.stringify(updatedRoot));
+    const compressedRoot = LZString.compressToUTF16(
+      JSON.stringify(updatedRoot)
+    );
+    localStorage.setItem(LOCALSTORAGE_ROOT, compressedRoot);
     // updating the LS data struture for the specific key
   } else {
     const localStoragePayload = { modifiedSince, data };
@@ -103,6 +109,9 @@ export const setDataInLocalStorage = <T extends unknown>(
         ...{ [localStorageDataKey]: localStoragePayload }
       }
     };
-    localStorage.setItem(LOCALSTORAGE_ROOT, JSON.stringify(updatedRoot));
+    const compressedRoot = LZString.compressToUTF16(
+      JSON.stringify(updatedRoot)
+    );
+    localStorage.setItem(LOCALSTORAGE_ROOT, compressedRoot);
   }
 };

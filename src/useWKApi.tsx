@@ -21,6 +21,7 @@ interface WKHookPayload<T> {
   isLoading: boolean;
   isError: boolean;
   doFetch: Dispatch<SetStateAction<string>>;
+  progress: { percentage: number };
 }
 
 export interface WanikaniApiResponse<T> {
@@ -31,7 +32,7 @@ export interface WanikaniApiResponse<T> {
     next_url: string | null; // ref to next page if it exists
     previous_url: string | null; // ref to prev page if it exists
   };
-  total_count?: number;
+  total_count: number;
   data_updated_at: string; // 2020-01-20T11:07:04.987403Z
   data: T[];
 }
@@ -61,6 +62,9 @@ export const useWKApi = <T extends unknown>(
   const [url, setUrl] = useState(initialUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
+  const [progress, setProgress] = useState({
+    percentage: 0
+  });
   let axiosConfig = {
     ...{
       headers: {
@@ -96,9 +100,23 @@ export const useWKApi = <T extends unknown>(
         const accumulatedData = [result.data.data];
         if (options.isPaginated && result.data.pages) {
           let nextPage = result.data.pages.next_url;
+          let itemsSoFar = 0;
           while (nextPage !== null) {
-            result = await axios(nextPage, options.axiosConfig);
+            itemsSoFar = itemsSoFar + result.data.data.length;
+            console.log(`items pulled so far ${itemsSoFar}`);
+            debugger;
+            setProgress({
+              percentage: Math.floor(
+                (itemsSoFar / result.data.total_count) * 100
+              )
+            });
+            result = await axios(nextPage, axiosConfig);
             accumulatedData.push(result.data.data);
+            if (!result.data.pages) {
+              nextPage = null;
+            } else {
+              nextPage = result.data.pages.next_url;
+            }
           }
         }
         // if data is nested due to pagination flatten
@@ -110,6 +128,7 @@ export const useWKApi = <T extends unknown>(
           options.localStorageDataKey
         );
         setData(dataToSet as WanikaniCollectionWrapper<T>[]);
+        debugger;
       } catch (error) {
         // WK Api will return 304s when data has not been updated
         // catch here and set data that exists in local storage
@@ -127,6 +146,7 @@ export const useWKApi = <T extends unknown>(
             // global error because our cache (LS) does not reflect what it should
           }
         }
+        console.warn("there was an errror", error);
         setIsError(true);
       }
       setIsLoading(false);
@@ -153,7 +173,8 @@ export const useWKApi = <T extends unknown>(
       data: options.mungeFunction ? options.mungeFunction(data) : data,
       isLoading,
       isError,
-      doFetch: setUrl
+      doFetch: setUrl,
+      progress
     }
   ];
 };
