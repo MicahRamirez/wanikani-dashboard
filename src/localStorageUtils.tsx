@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import LZString from "lz-string";
+import { WanikaniDB } from "./WanikaniDB";
 
 const LOCALSTORAGE_ROOT = "root";
 
@@ -24,7 +24,7 @@ export interface WanikaniCollectionWrapper<T> {
   data: T;
 }
 
-interface DataStructure<T> {
+export interface DataStructure<T> {
   modifiedSince: string;
   data: WanikaniCollectionWrapper<T>[];
 }
@@ -59,18 +59,25 @@ const parseLocalStorageRoot = () => {
   }
 
   try {
-    return JSON.parse(
-      LZString.decompressFromUTF16(localStorageRoot)
-    ) as LocalStorageRoot;
+    return JSON.parse(localStorageRoot) as LocalStorageRoot;
   } catch (error) {
     console.error("Unable to parse local storage values");
     return rootStructure;
   }
 };
 
-export const getDataFromLocalStorage = <T extends unknown>(
+export const getDataFromLocalStorage = async <T extends unknown>(
   localStorageDataKey: string
-): DataStructure<T> | undefined => {
+): Promise<DataStructure<T> | undefined> => {
+  debugger;
+  console.log(WanikaniDB.getTable(localStorageDataKey));
+  if (WanikaniDB.contains(localStorageDataKey)) {
+    debugger;
+    return await WanikaniDB.getTable(localStorageDataKey)
+      ?.orderBy("id")
+      .last();
+  }
+
   const localStorageRoot = parseLocalStorageRoot() as LocalStorageRoot;
   const dataNode = localStorageRoot.root[localStorageDataKey];
   if (isLocalStorageDataStructure<T>(dataNode)) {
@@ -78,12 +85,27 @@ export const getDataFromLocalStorage = <T extends unknown>(
   }
 };
 
-export const setDataInLocalStorage = <T extends unknown>(
+export const setDataInStorage = async <T extends unknown>(
   data: WanikaniCollectionWrapper<T>[],
   localStorageDataKey: string
 ) => {
-  const localStorageRoot = parseLocalStorageRoot();
   const modifiedSince = DateTime.utc().toHTTP();
+  if (WanikaniDB.contains(localStorageDataKey)) {
+    await WanikaniDB.getTable(localStorageDataKey)?.add({
+      data: data,
+      modifiedSince
+    });
+  } else {
+    setDataInLocalStorage(data, localStorageDataKey, modifiedSince);
+  }
+};
+
+const setDataInLocalStorage = <T extends unknown>(
+  data: WanikaniCollectionWrapper<T>[],
+  localStorageDataKey: string,
+  modifiedSince: string
+) => {
+  const localStorageRoot = parseLocalStorageRoot();
 
   // creating the LS data structure for the first time
   if (!localStorageRoot) {
@@ -95,10 +117,7 @@ export const setDataInLocalStorage = <T extends unknown>(
         }
       }
     };
-    const compressedRoot = LZString.compressToUTF16(
-      JSON.stringify(updatedRoot)
-    );
-    localStorage.setItem(LOCALSTORAGE_ROOT, compressedRoot);
+    localStorage.setItem(LOCALSTORAGE_ROOT, JSON.stringify(updatedRoot));
     // updating the LS data struture for the specific key
   } else {
     const localStoragePayload = { modifiedSince, data };
@@ -109,9 +128,6 @@ export const setDataInLocalStorage = <T extends unknown>(
         ...{ [localStorageDataKey]: localStoragePayload }
       }
     };
-    const compressedRoot = LZString.compressToUTF16(
-      JSON.stringify(updatedRoot)
-    );
-    localStorage.setItem(LOCALSTORAGE_ROOT, compressedRoot);
+    localStorage.setItem(LOCALSTORAGE_ROOT, JSON.stringify(updatedRoot));
   }
 };

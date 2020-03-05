@@ -6,6 +6,7 @@
     "@material-ui/core": "latest",
     "axios": "^0.19.1",
     "clsx": "latest",
+    "dexie": "^2.0.4",
     "luxon": "^1.22.0",
     "lz-string": "^1.4.4",
     "next": "latest",

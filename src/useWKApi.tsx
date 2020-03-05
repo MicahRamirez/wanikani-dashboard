@@ -1,10 +1,7 @@
 import { useState, useEffect, SetStateAction, Dispatch } from "react";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 
-import {
-  getDataFromLocalStorage,
-  setDataInLocalStorage
-} from "./localStorageUtils";
+import { getDataFromLocalStorage, setDataInStorage } from "./localStorageUtils";
 
 export interface apiOptions {
   initialData?: any;
@@ -123,7 +120,7 @@ export const useWKApi = <T extends unknown>(
         const dataToSet = accumulatedData.reduce((acc, currentValue) => {
           return [...currentValue, ...acc];
         }, []);
-        setDataInLocalStorage(
+        await setDataInStorage(
           dataToSet as WanikaniCollectionWrapper<T>[],
           options.localStorageDataKey
         );
@@ -134,7 +131,7 @@ export const useWKApi = <T extends unknown>(
         // catch here and set data that exists in local storage
         if (JSON.stringify(error.message).includes("304")) {
           setIsLoading(false);
-          const dataFromLocalStorage = getDataFromLocalStorage<T>(
+          const dataFromLocalStorage = await getDataFromLocalStorage<T>(
             options.localStorageDataKey
           );
           if (dataFromLocalStorage) {
@@ -160,10 +157,11 @@ export const useWKApi = <T extends unknown>(
     else if (options.localStorageDataKey) {
       // TODO: think about passing in the full data structure from LS as it is needed to set
       // in react state if a 304 is received
-      const dataFromLocalStorage = getDataFromLocalStorage<T>(
-        options.localStorageDataKey
+      getDataFromLocalStorage<T>(options.localStorageDataKey).then(
+        dataFromLocalStorage => {
+          fetchData(dataFromLocalStorage?.modifiedSince);
+        }
       );
-      fetchData(dataFromLocalStorage?.modifiedSince);
     } else {
       fetchData();
     }
