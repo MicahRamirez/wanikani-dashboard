@@ -24,12 +24,6 @@ import {
 import { LevelUpChart } from "./LevelUpChart";
 import { WanikaniCollectionWrapper } from "./localStorageUtils";
 
-/**
- * Upon leveling up all radicals are assigned and a portion of kanji are unlocked
- * in order to determine levelu
- * @param wrappedLevelUpAssignments
- * @param wrappedKanjiSubjects
- */
 const calculateFastestLevelUpTime = (
   wrappedLevelUpAssignments: WanikaniCollectionWrapper<Assignment>[],
   wrappedKanjiSubjects: WanikaniCollectionWrapper<Subject>[]
