@@ -69,6 +69,9 @@ export const analyzeResetData = (
   const resetData = unwrapCollectionWrapper(resetDataWrapper);
   // starting at a time before WK conception
   let mostRecentReset = resetData[0];
+  if (!mostRecentReset) {
+    return {};
+  }
   for (let reset of resetData) {
     if (
       DateTime.fromISO(mostRecentReset.confirmed_at) <
@@ -136,18 +139,22 @@ export const analyzeLevelProgressions = (
     targetLevel: number | undefined;
   }
 ) => {
-  if (!data || !mostRecentResetTimeStamp || !targetLevel) {
+  debugger;
+  if (!data) {
     return {};
+  } else if (data.length === 1) {
+    return { currentLevel: 1, formattedDataWithProjections: [] };
   }
-  const levelProgressions: LevelProgression[] = unwrapCollectionWrapper(data);
-  const filteredLevelProgressions: LevelProgression[] = filterLevelProgressions(
-    levelProgressions,
-    targetLevel,
-    mostRecentResetTimeStamp
-  );
-  const formattedData: ChartData[] = formatLevelProgressions(
-    filteredLevelProgressions
-  );
+  let levelProgressions: LevelProgression[] = unwrapCollectionWrapper(data);
+  if (targetLevel && mostRecentResetTimeStamp) {
+    levelProgressions = filterLevelProgressions(
+      levelProgressions,
+      targetLevel,
+      mostRecentResetTimeStamp
+    );
+  }
+
+  const formattedData: ChartData[] = formatLevelProgressions(levelProgressions);
   const averageLevelUpInDays: number = getAverageLevelUpInDays(formattedData);
   const medianLevelUpInDays: number = getMedianLevelUpInDays(formattedData);
   const { optimalLongInDays, optimalShortInDays } = calculateOptimalLevelUp();

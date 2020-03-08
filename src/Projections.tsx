@@ -121,7 +121,6 @@ const calculateFastestLevelUpTime = (
   );
   const kanjiPassedSoFar = Object.entries(kanjiBySrsStage).reduce(
     (count, [key, item]) => {
-      console.log(key);
       if (Number(key) >= GURU) {
         count += item.length;
       }
@@ -129,9 +128,15 @@ const calculateFastestLevelUpTime = (
     },
     0
   );
+  // const radicalUnlockMap =
+  // for kanji without an available_at
+  console.log(radicalSubjects, radicalsBySrsStage);
+  console.log(kanjiSubjects);
+  console.log(wrappedCurrentLevelUpSubjects.radical);
   // when there aren't enough kanji assignments to level up we need to look at radicals (harder case)
   if (kanjiAssignments.length < levelUpRequirement) {
-    console.log(radicalSubjects, radicalsBySrsStage);
+    // ASSUMPTION... Each radical unlocks at least ONE kanji
+    // so while there aren't enough kanji the minimum amount of time to level up is
     // look at each radical and its srs level
     // for an srs level what's the remaining time to completion (in seconds)
     // radical -> remaining time left
@@ -229,6 +234,7 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
     mostRecentResetTimeStamp,
     targetLevel
   });
+  console.log(currentLevel);
   // if we know the current level then also fetch data to project current performance
   const [
     {
@@ -249,8 +255,6 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
     },
     apiKey
   );
-  console.log("currentLevel", currentLevel);
-  console.log(currentKanjiSubjects);
   const [
     {
       data: levelUpAssignments,
@@ -297,8 +301,6 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
     !currentKanjiSubjects ||
     !formattedDataWithProjections
   ) {
-    console.log("Subject Progress", subjectProgress.percentage);
-    console.log("Assignment Progress", assignmentProgress.percentage);
     return (
       <div>
         <span>Subject Progress</span>
@@ -333,7 +335,12 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
           </Grid>
         </Grid>
         <Grid item xs={12}>
-          <LevelUpChart chartData={formattedDataWithProjections} />
+          {formattedDataWithProjections.length > 1 && (
+            <LevelUpChart chartData={formattedDataWithProjections} />
+          )}
+          {currentLevel === 1 && (
+            <span>Not enough data, come back after you level up :) </span>
+          )}
         </Grid>
       </Grid>
     </div>
