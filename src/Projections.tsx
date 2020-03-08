@@ -4,6 +4,7 @@ import LinearProgress from "@material-ui/core/LinearProgress";
 import Paper from "@material-ui/core/Paper";
 import { makeStyles } from "@material-ui/core/styles";
 import Grid from "@material-ui/core/Grid";
+import { DateTime } from "luxon";
 
 import {
   analyzeLevelProgressions,
@@ -24,16 +25,49 @@ import {
 import { LevelUpChart } from "./LevelUpChart";
 import { WanikaniCollectionWrapper } from "./localStorageUtils";
 
+// default sort for assignments that have available_at set to null. We want these at the end of the array. If available_at is null then it is likely in the
+// lesson queue.
+const EPOCH_STRING_DEFAULT = "2100-01-01T00:00:00Z";
+const sortByAvailable = (a: Assignment, b: Assignment) => {
+  const dateTimeA = DateTime.fromISO(
+    a.available_at ? a.available_at : EPOCH_STRING_DEFAULT
+  ).toMillis();
+  const dateTimeB = DateTime.fromISO(
+    b.available_at ? b.available_at : EPOCH_STRING_DEFAULT
+  ).toMillis();
+  return dateTimeA - dateTimeB;
+};
+
+interface SrsBuckets {
+  [srsStage: number]: Assignment[];
+}
+
+const SRS_BUCKETS: SrsBuckets = { 0: [], 1: [], 2: [], 3: [], 4: [] };
+
+const groupBySrsStage = (
+  groupingsSoFar: SrsBuckets,
+  currentAssignment: Assignment
+) => {
+  groupingsSoFar[currentAssignment.srs_stage].push(currentAssignment);
+  return groupingsSoFar;
+};
+
 const calculateFastestLevelUpTime = (
   wrappedLevelUpAssignments: WanikaniCollectionWrapper<Assignment>[],
-  wrappedKanjiSubjects: WanikaniCollectionWrapper<Subject>[]
+  wrappedSubjects: WanikaniCollectionWrapper<Subject>[],
+  currentLevel: number | undefined
 ) => {
-  if (!wrappedKanjiSubjects || !wrappedLevelUpAssignments) {
+  if (!wrappedSubjects || !wrappedLevelUpAssignments) {
     return;
   }
-  // levelUpAssignments are assignments that are required to be guru'ed to level up
-  const levelUpAssignments = unwrapCollectionWrapper(wrappedLevelUpAssignments)
-    .filter(elem => elem.subject_type !== "vocabulary")
+  debugger;
+  console.log(currentLevel);
+  // filtering out assignments without an ava
+  const {
+    kanji: kanjiAssignments,
+    radical: radicalAssignments
+  } = unwrapCollectionWrapper(wrappedLevelUpAssignments)
+    .filter(elem => elem.subject_type !== "vocabulary" && elem.srs_stage <= 4)
     .reduce<{ [subjectType: string]: Assignment[] }>(
       (prev, currentObj) => {
         prev[currentObj.subject_type].push(currentObj);
@@ -41,10 +75,45 @@ const calculateFastestLevelUpTime = (
       },
       { kanji: [], radical: [] }
     );
-  const kanjiSubjects = unwrapCollectionWrapper(wrappedKanjiSubjects);
+  // a level up subject is a subject who factors into whether or not a level progression occurs
+  const wrappedCurrentLevelUpSubjects = wrappedSubjects
+    .filter(elem => elem.object !== "vocabulary")
+    .reduce<{ [subjectType: string]: WanikaniCollectionWrapper<Subject>[] }>(
+      (prev, currentObj) => {
+        if (currentObj.data.level === currentLevel) {
+          prev[currentObj.object].push(currentObj);
+        }
+        return prev;
+      },
+      { kanji: [], radical: [] }
+    );
+  const { kanjiSubjects, radicalSubjects } = {
+    kanjiSubjects: unwrapCollectionWrapper(wrappedCurrentLevelUpSubjects.kanji),
+    radicalSubjects: unwrapCollectionWrapper(
+      wrappedCurrentLevelUpSubjects.radical
+    )
+  };
+  // number guru'ed required for level up is determined by kanji
   const levelUpRequirement = Math.ceil(kanjiSubjects.length * 0.9);
+  debugger;
+  console.log(levelUpRequirement);
+  console.log(radicalSubjects);
+  console.log(radicalAssignments);
+  // sort by closest available [now, a minute from now, ..., tomorrow, etc]
+  kanjiAssignments.sort(sortByAvailable);
+  radicalAssignments.sort(sortByAvailable);
+  // group by srs groups
+  const kanjiBySrsStage = kanjiAssignments.reduce(
+    groupBySrsStage,
+    Object.assign({}, SRS_BUCKETS)
+  );
+  const radicalsBySrsStage = radicalAssignments.reduce(
+    groupBySrsStage,
+    Object.assign({}, SRS_BUCKETS)
+  );
+  console.log(kanjiBySrsStage, radicalsBySrsStage);
   // when there aren't enough kanji assignments to level up we need to look at radicals (harder case)
-  if (levelUpAssignments.kanji.length < levelUpRequirement) {
+  if (kanjiAssignments.length < levelUpRequirement) {
     // look at each radical and its srs level
     // for an srs level what's the remaining time to completion (in seconds)
     // radical -> remaining time left
@@ -54,6 +123,7 @@ const calculateFastestLevelUpTime = (
     //    with these do they unlock enough kanji to meet the level requirement? if yes
     // upon completion
   }
+  for (let i = 0; i < kanjiAssignments.length; i++) {}
   // we have enough kanji unlocked start at the highest srs level
   // group all kanji by srs level and sort by available at in each grouping
   // kanjiGuruedSoFar: number
@@ -71,8 +141,6 @@ const calculateFastestLevelUpTime = (
   // at Guru - 1 levels add up number of kanji. Does current Guru'ed kanji + Guru - 1 level kanji >= level requirement?
 
   console.log("required kanji for level up", levelUpRequirement);
-  console.log("subjects", kanjiSubjects);
-  console.log(levelUpAssignments);
 };
 
 const useStyles = makeStyles(_ => ({
@@ -146,16 +214,20 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
       skip: currentLevel === undefined,
       axiosConfig: {
         method: "GET",
-        responseType: "json"
+        responseType: "json",
+        params: {
+          levels: `${currentLevel}`
+        }
       },
-      localStorageDataKey: ASSIGNMENTS_LOCAL_STORAGE_KEY
+      localStorageDataKey: `${ASSIGNMENTS_LOCAL_STORAGE_KEY}?levels=${currentLevel}`
     },
     apiKey
   );
   const classes = useStyles();
   const fastestLevelUpTime = calculateFastestLevelUpTime(
     levelUpAssignments,
-    currentKanjiSubjects
+    currentKanjiSubjects,
+    currentLevel
   );
   console.log(fastestLevelUpTime);
   if (

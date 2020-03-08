@@ -139,15 +139,16 @@ export const useWKApi = <T extends unknown>(
             // TODO: rethrow error to be caught by global error handler
             // global error because our cache (LS) does not reflect what it should
           }
+          console.error(
+            "unknown error occurred, rethrowing to global error handler",
+            error.message
+          );
+          throw new Error();
         }
         console.warn("there was an errror", error);
         setIsError(true);
       }
       setIsLoading(false);
-      console.error(
-        "unknown error occurred, rethrowing to global error handler"
-      );
-      throw new Error();
     };
 
     // used for dependent api calls
