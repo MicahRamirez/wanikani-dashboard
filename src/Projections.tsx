@@ -20,7 +20,9 @@ import {
   LEVEL_PROGRESSION_LOCAL_STORAGE_KEY,
   SUBJECTS_LOCAL_STORAGE_KEY,
   ASSIGNMENTS_LOCAL_STORAGE_KEY,
-  RESETS_LOCAL_STORAGE_KEY
+  RESETS_LOCAL_STORAGE_KEY,
+  SRS_STAGES,
+  FAST_LEVELS
 } from "./constants";
 import { LevelUpChart } from "./LevelUpChart";
 import { WanikaniCollectionWrapper } from "./localStorageUtils";
@@ -38,11 +40,22 @@ const sortByAvailable = (a: Assignment, b: Assignment) => {
   return dateTimeA - dateTimeB;
 };
 
+const GURU = 5;
+const APPRENTICE_FOUR = 4;
 interface SrsBuckets {
   [srsStage: number]: Assignment[];
 }
 
-const SRS_BUCKETS: SrsBuckets = { 0: [], 1: [], 2: [], 3: [], 4: [] };
+const newBuckets = () => {
+  const buckets: { [bucket: number]: Assignment[] } = {};
+  return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].reduce<SrsBuckets>(
+    (bucketSoFar, srsStage) => {
+      bucketSoFar[srsStage] = [];
+      return bucketSoFar;
+    },
+    buckets
+  );
+};
 
 const groupBySrsStage = (
   groupingsSoFar: SrsBuckets,
@@ -58,16 +71,14 @@ const calculateFastestLevelUpTime = (
   currentLevel: number | undefined
 ) => {
   if (!wrappedSubjects || !wrappedLevelUpAssignments) {
-    return;
+    return 0;
   }
-  debugger;
-  console.log(currentLevel);
   // filtering out assignments without an ava
   const {
     kanji: kanjiAssignments,
     radical: radicalAssignments
   } = unwrapCollectionWrapper(wrappedLevelUpAssignments)
-    .filter(elem => elem.subject_type !== "vocabulary" && elem.srs_stage <= 4)
+    .filter(elem => elem.subject_type !== "vocabulary")
     .reduce<{ [subjectType: string]: Assignment[] }>(
       (prev, currentObj) => {
         prev[currentObj.subject_type].push(currentObj);
@@ -95,25 +106,32 @@ const calculateFastestLevelUpTime = (
   };
   // number guru'ed required for level up is determined by kanji
   const levelUpRequirement = Math.ceil(kanjiSubjects.length * 0.9);
-  debugger;
-  console.log(levelUpRequirement);
-  console.log(radicalSubjects);
-  console.log(radicalAssignments);
   // sort by closest available [now, a minute from now, ..., tomorrow, etc]
   kanjiAssignments.sort(sortByAvailable);
   radicalAssignments.sort(sortByAvailable);
   // group by srs groups
   const kanjiBySrsStage = kanjiAssignments.reduce(
     groupBySrsStage,
-    Object.assign({}, SRS_BUCKETS)
+    newBuckets()
   );
+
   const radicalsBySrsStage = radicalAssignments.reduce(
     groupBySrsStage,
-    Object.assign({}, SRS_BUCKETS)
+    newBuckets()
   );
-  console.log(kanjiBySrsStage, radicalsBySrsStage);
+  const kanjiPassedSoFar = Object.entries(kanjiBySrsStage).reduce(
+    (count, [key, item]) => {
+      console.log(key);
+      if (Number(key) >= GURU) {
+        count += item.length;
+      }
+      return count;
+    },
+    0
+  );
   // when there aren't enough kanji assignments to level up we need to look at radicals (harder case)
   if (kanjiAssignments.length < levelUpRequirement) {
+    console.log(radicalSubjects, radicalsBySrsStage);
     // look at each radical and its srs level
     // for an srs level what's the remaining time to completion (in seconds)
     // radical -> remaining time left
@@ -123,7 +141,41 @@ const calculateFastestLevelUpTime = (
     //    with these do they unlock enough kanji to meet the level requirement? if yes
     // upon completion
   }
-  for (let i = 0; i < kanjiAssignments.length; i++) {}
+  let kanjiRequiredToLevelUp = levelUpRequirement - kanjiPassedSoFar;
+  let timeToLevelUp = 0;
+  loopOne: for (let i = APPRENTICE_FOUR; i >= 0; i--) {
+    // for each srs bucket we add the max amount of time expected for that level as it is the bottleneck
+    for (let k = 0; k < kanjiBySrsStage[i].length; k++) {
+      const currentKanjiAvailableAt = kanjiBySrsStage[i][k].available_at;
+      if (currentKanjiAvailableAt) {
+        // determine how long from now until this kanji can be attacked
+        const potentialTime = DateTime.fromISO(currentKanjiAvailableAt).diffNow(
+          "seconds"
+        ).seconds;
+        // add this kanji as one required for level up
+        kanjiRequiredToLevelUp--;
+        if (kanjiRequiredToLevelUp <= 0) {
+          // after including this kanji we have fit our requirement
+          // add the time to level up and get out of this iteration
+          timeToLevelUp += potentialTime;
+          break loopOne;
+        } else if (k + 1 === kanjiBySrsStage[i].length) {
+          // we attempted to add every single time until as a configuration, none got us to required level up
+          // this means that we at least have some other kanji in a lower SRS bucket so at the minimum the time required
+          // is this srs level interval + some lower srs bucket time from now
+          if (currentLevel && FAST_LEVELS[currentLevel]) {
+            timeToLevelUp += SRS_STAGES[i].accelerated_interval;
+          } else {
+            timeToLevelUp += SRS_STAGES[i].interval;
+          }
+        }
+      } else {
+        console.warn("potential time was null or undefined");
+      }
+    }
+  }
+  return timeToLevelUp;
+  // for ()
   // we have enough kanji unlocked start at the highest srs level
   // group all kanji by srs level and sort by available at in each grouping
   // kanjiGuruedSoFar: number
@@ -139,8 +191,6 @@ const calculateFastestLevelUpTime = (
   //
   // add timeSoFar + time
   // at Guru - 1 levels add up number of kanji. Does current Guru'ed kanji + Guru - 1 level kanji >= level requirement?
-
-  console.log("required kanji for level up", levelUpRequirement);
 };
 
 const useStyles = makeStyles(_ => ({
@@ -229,7 +279,13 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
     currentKanjiSubjects,
     currentLevel
   );
-  console.log(fastestLevelUpTime);
+  const { days, hours, minutes } = DateTime.local()
+    .plus({ seconds: fastestLevelUpTime })
+    .diffNow(["days", "hours", "minutes"])
+    .toObject();
+  const fastestLevelUpDate = DateTime.local()
+    .plus({ seconds: fastestLevelUpTime })
+    .toFormat("ff");
   if (
     isLoading ||
     resetDataIsLoading ||
@@ -259,7 +315,15 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
       <Grid container spacing={3}>
         <Grid container item xs={12} spacing={10}>
           <Grid item xs={4} spacing={1}>
-            <Paper elevation={3}>Fastest time to level up</Paper>
+            <Paper elevation={3}>
+              <span>Fastest time to level up</span>
+              <br />
+              {`${days}D ${hours}H ${
+                minutes ? Math.ceil(minutes) : "unknown"
+              }M`}
+              <br />
+              <span>{fastestLevelUpDate}</span>
+            </Paper>
           </Grid>
           <Grid item xs={4} spacing={1}>
             <Paper elevation={3}>Estimated time to level up</Paper>
