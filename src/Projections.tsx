@@ -128,6 +128,9 @@ const calculateFastestLevelUpTime = (
     },
     0
   );
+  // want a map of for a radical which kanji they unlock at this level
+  // so same as kanji, each radical sorted by available_at and grouped by srs stage
+  // while going through the exact same algo for kanji only different is for the radical id unlockMap[radicalId].length - kanjiPassedSoFar
   // const radicalUnlockMap =
   // for kanji without an available_at
   console.log(radicalSubjects, radicalsBySrsStage);

@@ -3,6 +3,7 @@ import TextField from "@material-ui/core/TextField";
 import Button from "@material-ui/core/Button";
 
 const apiKeyIsValid = (apiKey: string) => {
+  debugger;
   console.error("api key is invalid");
   console.log(apiKey.length === 36);
   return apiKey.length === 36;
@@ -18,7 +19,9 @@ export const ApiKeyForm = ({ saveApiKey }: { saveApiKey: any }) => {
     }
   };
 
-  const handleClick = () => {
+  const handleClick = (e: any) => {
+    // submits form which appends a query param to the url lol
+    e.preventDefault();
     if (!apiKeyIsValid(apiKeyInput)) {
       setShowError(true);
     } else {
