@@ -14,7 +14,6 @@ import { DateTime } from "luxon";
 import { ChartData } from "./levelUpProjectionUtils";
 
 /**
- *  This chart now has a lot of state, lots of API calls, etc... After it's complete it would be nice to pull up all API calls
  */
 export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
   chartData
@@ -61,13 +60,6 @@ export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
           <Line type="natural" dataKey="optimalLevel" stroke="red" />
         </LineChart>
       </ResponsiveContainer>
-      <p>
-        <span>CURRENT KANJI SUBJECT</span>
-        {/* {JSON.stringify(currentKanjiSubjects)} */}
-
-        <span>CURRENT KANJI ASSIGNMENT</span>
-        {/* {JSON.stringify(currentKanjiAssignments)} */}
-      </p>
     </div>
   );
 };

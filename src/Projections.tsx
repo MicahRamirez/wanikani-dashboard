@@ -128,6 +128,44 @@ const calculateFastestLevelUpTime = (
     },
     0
   );
+  const kanjiAssignmentSubjectIdMap = kanjiAssignments.reduce<{
+    [assignmentSubjectId: number]: boolean;
+  }>((assignmentMap, kanjiAssignment) => {
+    assignmentMap[kanjiAssignment.subject_id] = true;
+    return assignmentMap;
+  }, {});
+  const lockedKanji = wrappedCurrentLevelUpSubjects.kanji.filter(
+    wrappedSubject => !kanjiAssignmentSubjectIdMap[wrappedSubject.id]
+  );
+  const currentLevelRadicalAssignmentMap = radicalAssignments.reduce<{
+    [radicalSubjectId: number]: boolean;
+  }>((radicalMap, currentRadicalAssignment) => {
+    radicalMap[currentRadicalAssignment.subject_id] = true;
+    return radicalMap;
+  }, {});
+  const radicalUnlocksKanjiMap = lockedKanji.reduce<{
+    [radicalSubjectId: number]: number[];
+  }>((radicalUnlocksKanji, currentLockedKanji) => {
+    if (currentLockedKanji.data.component_subject_ids) {
+      // for a locked radical for each component radical add that radical as a key with value being kanji associated with it
+      // a single radical could hypothetically unlock more than 1 kanji
+      currentLockedKanji.data.component_subject_ids.forEach(
+        radicalSubjectId => {
+          if (
+            !radicalUnlocksKanji[radicalSubjectId] &&
+            currentLevelRadicalAssignmentMap[radicalSubjectId]
+          ) {
+            radicalUnlocksKanji[radicalSubjectId] = [currentLockedKanji.id];
+          } else if (Array.isArray(radicalUnlocksKanji[radicalSubjectId])) {
+            radicalUnlocksKanji[radicalSubjectId].push(currentLockedKanji.id);
+          }
+        }
+      );
+    }
+    return radicalUnlocksKanji;
+  }, {});
+  console.log(lockedKanji);
+  console.log(radicalUnlocksKanjiMap);
   // want a map of for a radical which kanji they unlock at this level
   // so same as kanji, each radical sorted by available_at and grouped by srs stage
   // while going through the exact same algo for kanji only different is for the radical id unlockMap[radicalId].length - kanjiPassedSoFar
@@ -136,9 +174,14 @@ const calculateFastestLevelUpTime = (
   console.log(radicalSubjects, radicalsBySrsStage);
   console.log(kanjiSubjects);
   console.log(wrappedCurrentLevelUpSubjects.radical);
+  console.log("Wrapped Kanji Subjects", wrappedCurrentLevelUpSubjects.kanji);
   // when there aren't enough kanji assignments to level up we need to look at radicals (harder case)
+  // EASY CASE: One radical unlocks one kanji
+  // DIFFICULT CASE: Multiple radicals on the same level required to unlock a kanji
+  // when there are multiple radicals the bottle neck is on the radical at the lowest srs stage
+  // so when calculating the optimal time with dependent radicals, take the radical at the lower srs stage throw out the higher one
+  // if the radicals are at the same level then take the one whose available now is furthest from now
   if (kanjiAssignments.length < levelUpRequirement) {
-    // ASSUMPTION... Each radical unlocks at least ONE kanji
     // so while there aren't enough kanji the minimum amount of time to level up is
     // look at each radical and its srs level
     // for an srs level what's the remaining time to completion (in seconds)

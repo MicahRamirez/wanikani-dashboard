@@ -1,3 +1,5 @@
+// TODO Subject is actually a generic type Subject<Kanji | Radical | Vocabulary>
+
 export interface LevelProgression {
   abandoned_at: null | string; // Timestamp when the user abandons the level. This is primary used when the user initiates a reset.
   completed_at: null | string; // Timestamp when the user burns 100% of the assignments belonging to the associated subject's level.
@@ -37,6 +39,7 @@ export interface Subject {
   meaning_mnemonic: string; // The subject's meaning mnemonic.
   meanings: SubjectMeaning[]; // The subject meanings. See table below for the object structure.
   slug: string; // The string that is used when generating the document URL for the subject. Radicals use their meaning, downcased. Kanji and vocabulary use their characters.
+  component_subject_ids?: number[];
 }
 
 export interface Assignment {

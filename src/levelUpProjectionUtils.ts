@@ -139,7 +139,6 @@ export const analyzeLevelProgressions = (
     targetLevel: number | undefined;
   }
 ) => {
-  debugger;
   if (!data) {
     return {};
   } else if (data.length === 1) {
