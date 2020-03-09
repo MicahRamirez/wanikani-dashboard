@@ -175,6 +175,29 @@ const calculateFastestLevelUpTime = (
   console.log(kanjiSubjects);
   console.log(wrappedCurrentLevelUpSubjects.radical);
   console.log("Wrapped Kanji Subjects", wrappedCurrentLevelUpSubjects.kanji);
+
+  const determineKanjiUnlockedByCurrentRadical = (
+    radicalAssignment: Assignment
+  ) => {
+    console.log(radicalAssignment);
+    return 1;
+  };
+  const calculateTimeToGuruInSeconds = (level: number | undefined) => {
+    if (!level) {
+      return 0;
+    }
+    let srsIdx = 0;
+    let timeInSeconds = 0;
+    while (srsIdx < 5) {
+      if (FAST_LEVELS[level]) {
+        timeInSeconds += SRS_STAGES[srsIdx].accelerated_interval;
+      } else {
+        timeInSeconds += SRS_STAGES[srsIdx].interval;
+      }
+      srsIdx++;
+    }
+    return timeInSeconds;
+  };
   // when there aren't enough kanji assignments to level up we need to look at radicals (harder case)
   // EASY CASE: One radical unlocks one kanji
   // DIFFICULT CASE: Multiple radicals on the same level required to unlock a kanji
@@ -182,6 +205,48 @@ const calculateFastestLevelUpTime = (
   // so when calculating the optimal time with dependent radicals, take the radical at the lower srs stage throw out the higher one
   // if the radicals are at the same level then take the one whose available now is furthest from now
   if (kanjiAssignments.length < levelUpRequirement) {
+    let lockedKanjiUntilLevelUpRequirement =
+      kanjiAssignments.length - levelUpRequirement;
+    let timeToLevelUpInSeconds = 0;
+    // SIMPLIFICATION STEP: Find radicals that map to the same kanji, determine which is at the lowest SRS stage, throw out the other
+    srsLoop: for (let i = APPRENTICE_FOUR; i >= 0; i--) {
+      debugger;
+      if (radicalsBySrsStage[i].length === 0) {
+        if (currentLevel && FAST_LEVELS[currentLevel]) {
+          timeToLevelUpInSeconds += SRS_STAGES[i].accelerated_interval;
+        } else {
+          timeToLevelUpInSeconds += SRS_STAGES[i].interval;
+        }
+      }
+      for (let k = 0; k < radicalsBySrsStage[i].length; k++) {
+        const currentRadicalAvailableAt = radicalsBySrsStage[i][k].available_at;
+        if (currentRadicalAvailableAt) {
+          const potentialTimeInSeconds = DateTime.fromISO(
+            currentRadicalAvailableAt
+          ).diffNow("seconds").seconds;
+          lockedKanjiUntilLevelUpRequirement -= determineKanjiUnlockedByCurrentRadical(
+            radicalsBySrsStage[i][k]
+          );
+          if (lockedKanjiUntilLevelUpRequirement <= 0) {
+            timeToLevelUpInSeconds += potentialTimeInSeconds;
+            break srsLoop;
+          }
+        } else if (k + 1 === radicalsBySrsStage[i].length) {
+          if (currentLevel && FAST_LEVELS[currentLevel]) {
+            timeToLevelUpInSeconds += SRS_STAGES[i].accelerated_interval;
+          } else {
+            timeToLevelUpInSeconds += SRS_STAGES[i].interval;
+          }
+        }
+      }
+    }
+    console.log(
+      "RADICALS",
+      timeToLevelUpInSeconds,
+      calculateTimeToGuruInSeconds(currentLevel)
+    );
+    return timeToLevelUpInSeconds + calculateTimeToGuruInSeconds(currentLevel);
+
     // so while there aren't enough kanji the minimum amount of time to level up is
     // look at each radical and its srs level
     // for an srs level what's the remaining time to completion (in seconds)
