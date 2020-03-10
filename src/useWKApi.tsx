@@ -53,9 +53,7 @@ export const useWKApi = <T extends unknown>(
   options: apiOptions,
   apiKey: string
 ): WKHookPayload<T>[] => {
-  const [data, setData] = useState<WanikaniCollectionWrapper<T>[]>(
-    options.initialData
-  );
+  const [data, setData] = useState<WanikaniCollectionWrapper<T>[]>([]);
   const [url, setUrl] = useState(initialUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);

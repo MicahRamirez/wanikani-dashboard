@@ -46,7 +46,7 @@ interface SrsBuckets {
   [srsStage: number]: Assignment[];
 }
 
-const newBuckets = () => {
+const newSrsBuckets = () => {
   const buckets: { [bucket: number]: Assignment[] } = {};
   return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].reduce<SrsBuckets>(
     (bucketSoFar, srsStage) => {
@@ -65,15 +65,22 @@ const groupBySrsStage = (
   return groupingsSoFar;
 };
 
+const createExistenceMap = (assignmentArray: Assignment[]) => {
+  return assignmentArray.reduce<{
+    [assignmentId: number]: boolean;
+  }>((assignmentMap, assignment) => {
+    assignmentMap[assignment.subject_id] = true;
+    return assignmentMap;
+  }, {});
+};
+
+// calculates the fastest possible time a user can progress through the current level
 const calculateFastestLevelUpTime = (
-  wrappedLevelUpAssignments: WanikaniCollectionWrapper<Assignment>[],
+  wrappedLevelUpAssignments: WanikaniCollectionWrapper<Assignment>[], // assumption is that these assignments are for THIS level
   wrappedSubjects: WanikaniCollectionWrapper<Subject>[],
   currentLevel: number | undefined
 ) => {
-  if (!wrappedSubjects || !wrappedLevelUpAssignments) {
-    return 0;
-  }
-  // filtering out assignments without an ava
+  // split assignments for this level into kanji and radicals, ignore vocab
   const {
     kanji: kanjiAssignments,
     radical: radicalAssignments
@@ -86,7 +93,7 @@ const calculateFastestLevelUpTime = (
       },
       { kanji: [], radical: [] }
     );
-  // a level up subject is a subject who factors into whether or not a level progression occurs
+  // split *this levels* subjects into kanji and radicals
   const wrappedCurrentLevelUpSubjects = wrappedSubjects
     .filter(elem => elem.object !== "vocabulary")
     .reduce<{ [subjectType: string]: WanikaniCollectionWrapper<Subject>[] }>(
@@ -98,31 +105,34 @@ const calculateFastestLevelUpTime = (
       },
       { kanji: [], radical: [] }
     );
+
+  // map of radicalId -> Assignment<Radical>
   const radicalIdToRadicalData = radicalAssignments.reduce<{
     [radicalId: number]: Assignment;
   }>((radicalIdToRadicalAssignment, radical) => {
     radicalIdToRadicalAssignment[radical.subject_id] = radical;
     return radicalIdToRadicalAssignment;
   }, {});
-  const { kanjiSubjects } = {
-    kanjiSubjects: unwrapCollectionWrapper(wrappedCurrentLevelUpSubjects.kanji)
-  };
-  // number guru'ed required for level up is determined by kanji
+  // remove the WanikaniCollectionWrapper from subjects
+  const kanjiSubjects = unwrapCollectionWrapper(
+    wrappedCurrentLevelUpSubjects.kanji
+  );
+  // forumal for calculating required kanji to progress to the next level
   const levelUpRequirement = Math.ceil(kanjiSubjects.length * 0.9);
   // sort by closest available [now, a minute from now, ..., tomorrow, etc]
   kanjiAssignments.sort(sortByAvailable);
   radicalAssignments.sort(sortByAvailable);
   // group by srs groups
-  const kanjiBySrsStage = kanjiAssignments.reduce(
+  const kanjiBySrsStage = kanjiAssignments.reduce<SrsBuckets>(
     groupBySrsStage,
-    newBuckets()
+    newSrsBuckets()
   );
-
-  const radicalsBySrsStage = radicalAssignments.reduce(
+  const radicalsBySrsStage = radicalAssignments.reduce<SrsBuckets>(
     groupBySrsStage,
-    newBuckets()
+    newSrsBuckets()
   );
-  const kanjiPassedSoFar = Object.entries(kanjiBySrsStage).reduce(
+  // out of all kanji assignments add up those >= GURU stage
+  const kanjiPassedSoFar = Object.entries(kanjiBySrsStage).reduce<number>(
     (count, [key, item]) => {
       if (Number(key) >= GURU) {
         count += item.length;
@@ -131,35 +141,38 @@ const calculateFastestLevelUpTime = (
     },
     0
   );
-  const kanjiAssignmentSubjectIdMap = kanjiAssignments.reduce<{
-    [assignmentSubjectId: number]: boolean;
-  }>((assignmentMap, kanjiAssignment) => {
-    assignmentMap[kanjiAssignment.subject_id] = true;
-    return assignmentMap;
-  }, {});
-  const lockedKanji = wrappedCurrentLevelUpSubjects.kanji.filter(
-    wrappedSubject => !kanjiAssignmentSubjectIdMap[wrappedSubject.id]
+
+  const currentLevelKanjiAssignmentHashset = createExistenceMap(
+    kanjiAssignments
   );
-  const currentLevelRadicalAssignmentMap = radicalAssignments.reduce<{
-    [radicalSubjectId: number]: boolean;
-  }>((radicalMap, currentRadicalAssignment) => {
-    radicalMap[currentRadicalAssignment.subject_id] = true;
-    return radicalMap;
-  }, {});
+  const currentLevelRadicalAssignmentHashset = createExistenceMap(
+    radicalAssignments
+  );
+
+  // Cross reference Subject<Kanji> for this level with Assignment<Kanji> to determine which kanji are locked
+  // These stay wrapped because the subject_id is on the wrapper
+  const lockedKanji: WanikaniCollectionWrapper<
+    Subject
+  >[] = wrappedCurrentLevelUpSubjects.kanji.filter(
+    wrappedSubject => !currentLevelKanjiAssignmentHashset[wrappedSubject.id]
+  );
+
   const radicalUnlocksKanjiMap = lockedKanji.reduce<{
     [radicalSubjectId: number]: number[];
   }>((radicalUnlocksKanji, currentLockedKanji) => {
+    // component_subject_ids is an optional property on the Subject type, so we have to check for it
     if (currentLockedKanji.data.component_subject_ids) {
-      // for a locked radical for each component radical add that radical as a key with value being kanji associated with it
-      // a single radical could hypothetically unlock more than 1 kanji
+      // for a locked kanji for each component radical in component_subject_ids
       currentLockedKanji.data.component_subject_ids.forEach(
         radicalSubjectId => {
+          // add the radical to the map with key as radicalSubjectId and value being the currentLockedKanji.id
           if (
             !radicalUnlocksKanji[radicalSubjectId] &&
-            currentLevelRadicalAssignmentMap[radicalSubjectId]
+            currentLevelRadicalAssignmentHashset[radicalSubjectId]
           ) {
             radicalUnlocksKanji[radicalSubjectId] = [currentLockedKanji.id];
           } else if (Array.isArray(radicalUnlocksKanji[radicalSubjectId])) {
+            // a radical with an existing entry is a component for  at least two kanji in the current level
             radicalUnlocksKanji[radicalSubjectId].push(currentLockedKanji.id);
           }
         }
@@ -168,24 +181,25 @@ const calculateFastestLevelUpTime = (
     return radicalUnlocksKanji;
   }, {});
 
+  // determines the number of kanji that are unlocked by the GURU'ing of each radical assignment
   const determineKanjiUnlockedByCurrentRadical = (
     radicalAssignment: Assignment,
-    radicalUnlocksMap: { [radicalId: number]: number[] }
+    radicalUnlocksMap: { [radicalId: number]: number[] },
+    lockedKanji: WanikaniCollectionWrapper<Subject>[]
   ) => {
     let numberUnlockedKanji = 0;
-    // for each kanji that this radical COULD potentially unlock
+    // for a radical assignment, check each kanji it is a component of
     radicalUnlocksMap[radicalAssignment.subject_id].forEach(kanjiSubjectId => {
-      // get the kanji subject data structure
-      const relevantKanji = lockedKanji.filter(wrappedKanji => {
+      // from the locked kanji set get the kanjiSubject with kanjiSubjectId
+      const kanji = lockedKanji.filter(wrappedKanji => {
         return wrappedKanji.id === kanjiSubjectId;
       })[0].data;
-      // ensure it has components
-      if (relevantKanji.component_subject_ids) {
-        // look through each component
-        relevantKanji.component_subject_ids.forEach(radicalId => {
-          // a component can be outside the current level(thus undefined in the lookup map), we do not care about these because
-          // they were previously unlocked in another level and we are trying to determine what components in THIS LEVEL
-          // unlock what kanji
+      // for typing sake, check that the component_subject_ids prop exists
+      if (kanji.component_subject_ids) {
+        kanji.component_subject_ids.forEach(radicalId => {
+          // a radical component can be outside the current level(thus undefined in the lookup map), we do not care about these because
+          // they were previously unlocked in another level and we are trying to determine what radical components in THIS LEVEL
+          // unlock particular kanji
           const radicalCompareTo: Assignment | undefined =
             radicalIdToRadicalData[radicalId];
           // make sure we aren't comparing the same kanji
@@ -193,9 +207,8 @@ const calculateFastestLevelUpTime = (
             radicalCompareTo &&
             radicalAssignment.subject_id !== radicalCompareTo.subject_id
           ) {
-            // compare srs bucket, if current radical is at a lower srs bucket than bottle neck (HACKY)
-            if (radicalCompareTo.srs_stage < radicalAssignment.srs_stage) {
-              // dont add
+            if (radicalAssignment.srs_stage < radicalCompareTo.srs_stage) {
+              numberUnlockedKanji++;
             } else if (
               radicalCompareTo.srs_stage === radicalAssignment.srs_stage &&
               radicalAssignment.available_at &&
@@ -210,9 +223,6 @@ const calculateFastestLevelUpTime = (
               if (isSmaller > 0) {
                 numberUnlockedKanji++;
               }
-            } else {
-              // otherwise the srs stage for this kanji is lower therefore it is a bottleneck so the counter should be decremented
-              numberUnlockedKanji++;
             }
           }
         });
@@ -274,7 +284,8 @@ const calculateFastestLevelUpTime = (
           ).diffNow("seconds").seconds;
           lockedKanjiUntilLevelUpRequirement -= determineKanjiUnlockedByCurrentRadical(
             radicalsBySrsStage[i][k],
-            radicalUnlocksKanjiMap
+            radicalUnlocksKanjiMap,
+            lockedKanji
           );
           if (lockedKanjiUntilLevelUpRequirement <= 0) {
             timeToLevelUpInSeconds += potentialTimeInSeconds;

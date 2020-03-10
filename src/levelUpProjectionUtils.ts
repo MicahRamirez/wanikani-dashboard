@@ -139,7 +139,7 @@ export const analyzeLevelProgressions = (
     targetLevel: number | undefined;
   }
 ) => {
-  if (!data) {
+  if (data.length === 0) {
     return {};
   } else if (data.length === 1) {
     return { currentLevel: 1, formattedDataWithProjections: [] };
