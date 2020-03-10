@@ -130,6 +130,23 @@ const determineKanjiUnlockedByCurrentRadical = (
   return numberUnlockedKanji;
 };
 
+const calculateTimeToGuruInSeconds = (level: number | undefined) => {
+  if (!level) {
+    return 0;
+  }
+  let srsIdx = 0;
+  let timeInSeconds = 0;
+  while (srsIdx < 5) {
+    if (FAST_LEVELS[level]) {
+      timeInSeconds += SRS_STAGES[srsIdx].accelerated_interval;
+    } else {
+      timeInSeconds += SRS_STAGES[srsIdx].interval;
+    }
+    srsIdx++;
+  }
+  return timeInSeconds;
+};
+
 // calculates the fastest possible time a user can progress through the current level
 const calculateFastestLevelUpTime = (
   wrappedLevelUpAssignments: WanikaniCollectionWrapper<Assignment>[], // assumption is that these assignments are for THIS level
@@ -237,22 +254,6 @@ const calculateFastestLevelUpTime = (
     return radicalUnlocksKanji;
   }, {});
 
-  const calculateTimeToGuruInSeconds = (level: number | undefined) => {
-    if (!level) {
-      return 0;
-    }
-    let srsIdx = 0;
-    let timeInSeconds = 0;
-    while (srsIdx < 5) {
-      if (FAST_LEVELS[level]) {
-        timeInSeconds += SRS_STAGES[srsIdx].accelerated_interval;
-      } else {
-        timeInSeconds += SRS_STAGES[srsIdx].interval;
-      }
-      srsIdx++;
-    }
-    return timeInSeconds;
-  };
   // when there aren't enough kanji assignments to level up we need to look at radicals (harder case)
   // EASY CASE: One radical unlocks one kanji
   // DIFFICULT CASE: Multiple radicals on the same level required to unlock a kanji
@@ -350,8 +351,6 @@ const useStyles = makeStyles(_ => ({
     flexGrow: 1
   }
 }));
-
-// const Tiles = () => {};
 
 export const Projections = ({ apiKey }: { apiKey: string }) => {
   // *should* yield all level progressions, including those from past resets
