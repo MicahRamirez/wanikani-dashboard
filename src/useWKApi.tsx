@@ -66,7 +66,7 @@ export const useWKApi = <T extends unknown>(
         Authorization: `Bearer ${apiKey}`,
         ...options.axiosConfig.headers
       },
-      timeout: 3000,
+      timeout: 10000,
       ...options.axiosConfig
     }
   };

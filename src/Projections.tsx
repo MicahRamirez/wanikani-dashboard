@@ -74,6 +74,62 @@ const createExistenceMap = (assignmentArray: Assignment[]) => {
   }, {});
 };
 
+// determines the number of kanji that are unlocked by the GURU'ing of each radical assignment
+const determineKanjiUnlockedByCurrentRadical = (
+  radicalAssignment: Assignment,
+  radicalUnlocksMap: { [radicalId: number]: number[] },
+  lockedKanji: WanikaniCollectionWrapper<Subject>[],
+  radicalIdToRadicalData: { [radicalId: number]: Assignment }
+) => {
+  let numberUnlockedKanji = 0;
+  // for a radical assignment, check each kanji it is a component of
+  radicalUnlocksMap[radicalAssignment.subject_id].forEach(kanjiSubjectId => {
+    // from the locked kanji set get the kanjiSubject with kanjiSubjectId
+    const kanji = lockedKanji.filter(wrappedKanji => {
+      return wrappedKanji.id === kanjiSubjectId;
+    })[0].data;
+    // for typing sake, check that the component_subject_ids prop exists
+    if (kanji.component_subject_ids) {
+      kanji.component_subject_ids.forEach(radicalId => {
+        // a radical component can be outside the current level(thus undefined in the lookup map), we do not care about these because
+        // they were previously unlocked in another level and we are trying to determine what radical components in THIS LEVEL
+        // unlock particular kanji
+        const radicalCompareTo: Assignment | undefined =
+          radicalIdToRadicalData[radicalId];
+        // make sure we aren't comparing the same kanji
+        if (
+          radicalCompareTo &&
+          radicalAssignment.subject_id !== radicalCompareTo.subject_id
+        ) {
+          if (radicalAssignment.srs_stage < radicalCompareTo.srs_stage) {
+            numberUnlockedKanji++;
+          } else if (
+            radicalCompareTo.srs_stage === radicalAssignment.srs_stage &&
+            radicalAssignment.available_at &&
+            radicalCompareTo.available_at
+          ) {
+            // same srs stage
+            const isSmaller = DateTime.fromISO(
+              radicalAssignment.available_at
+            ).diff(DateTime.fromISO(radicalCompareTo.available_at), ["seconds"])
+              .seconds;
+            if (isSmaller > 0) {
+              numberUnlockedKanji++;
+            }
+          }
+        }
+      });
+    }
+  });
+  if (numberUnlockedKanji === 0) {
+    console.warn(
+      "this radical assignment does not unlock any kanji by itself?",
+      radicalAssignment
+    );
+  }
+  return numberUnlockedKanji;
+};
+
 // calculates the fastest possible time a user can progress through the current level
 const calculateFastestLevelUpTime = (
   wrappedLevelUpAssignments: WanikaniCollectionWrapper<Assignment>[], // assumption is that these assignments are for THIS level
@@ -181,66 +237,6 @@ const calculateFastestLevelUpTime = (
     return radicalUnlocksKanji;
   }, {});
 
-  // determines the number of kanji that are unlocked by the GURU'ing of each radical assignment
-  const determineKanjiUnlockedByCurrentRadical = (
-    radicalAssignment: Assignment,
-    radicalUnlocksMap: { [radicalId: number]: number[] },
-    lockedKanji: WanikaniCollectionWrapper<Subject>[]
-  ) => {
-    let numberUnlockedKanji = 0;
-    // for a radical assignment, check each kanji it is a component of
-    radicalUnlocksMap[radicalAssignment.subject_id].forEach(kanjiSubjectId => {
-      // from the locked kanji set get the kanjiSubject with kanjiSubjectId
-      const kanji = lockedKanji.filter(wrappedKanji => {
-        return wrappedKanji.id === kanjiSubjectId;
-      })[0].data;
-      // for typing sake, check that the component_subject_ids prop exists
-      if (kanji.component_subject_ids) {
-        kanji.component_subject_ids.forEach(radicalId => {
-          // a radical component can be outside the current level(thus undefined in the lookup map), we do not care about these because
-          // they were previously unlocked in another level and we are trying to determine what radical components in THIS LEVEL
-          // unlock particular kanji
-          const radicalCompareTo: Assignment | undefined =
-            radicalIdToRadicalData[radicalId];
-          // make sure we aren't comparing the same kanji
-          if (
-            radicalCompareTo &&
-            radicalAssignment.subject_id !== radicalCompareTo.subject_id
-          ) {
-            if (radicalAssignment.srs_stage < radicalCompareTo.srs_stage) {
-              numberUnlockedKanji++;
-            } else if (
-              radicalCompareTo.srs_stage === radicalAssignment.srs_stage &&
-              radicalAssignment.available_at &&
-              radicalCompareTo.available_at
-            ) {
-              // same srs stage
-              const isSmaller = DateTime.fromISO(
-                radicalAssignment.available_at
-              ).diff(DateTime.fromISO(radicalCompareTo.available_at), [
-                "seconds"
-              ]).seconds;
-              if (isSmaller > 0) {
-                numberUnlockedKanji++;
-              }
-            }
-          }
-        });
-      }
-    });
-    if (numberUnlockedKanji < 0 || numberUnlockedKanji === 0) {
-      console.warn("something is fishy");
-    }
-    // idx into what kanji are associated with radical
-    // for each kanji this radical is associated
-    //    for each radical associated with the current kanji [component subject ids]
-    //        determine which radical is the bottle neck
-    //        if this radical is bottle neck ? {radicalId: {SRS_STAGE, available_at}} then
-    //           add 1
-    //        ow return 0
-
-    return numberUnlockedKanji;
-  };
   const calculateTimeToGuruInSeconds = (level: number | undefined) => {
     if (!level) {
       return 0;
@@ -285,7 +281,8 @@ const calculateFastestLevelUpTime = (
           lockedKanjiUntilLevelUpRequirement -= determineKanjiUnlockedByCurrentRadical(
             radicalsBySrsStage[i][k],
             radicalUnlocksKanjiMap,
-            lockedKanji
+            lockedKanji,
+            radicalIdToRadicalData
           );
           if (lockedKanjiUntilLevelUpRequirement <= 0) {
             timeToLevelUpInSeconds += potentialTimeInSeconds;
