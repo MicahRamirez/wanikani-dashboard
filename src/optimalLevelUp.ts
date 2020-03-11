@@ -303,7 +303,7 @@ export const calculateFastestLevelUpTime = (
   const kanjiSubjects = unwrapCollectionWrapper(
     wrappedCurrentLevelUpSubjects.kanji
   );
-  // forumal for calculating required kanji to progress to the next level
+  // formula for calculating required kanji to progress to the next level
   const levelUpRequirement = Math.ceil(kanjiSubjects.length * 0.9);
   // sort by closest available [now, a minute from now, ..., tomorrow, etc]
   kanjiAssignments.sort(sortByAvailable);
@@ -372,6 +372,7 @@ export const calculateFastestLevelUpTime = (
   }
 
   if (kanjiAssignments.length < levelUpRequirement) {
+    // calculates the time for kanjiAssignments.length to equal the levelRequirement + the time it takes to guru those unlocked
     return (
       calculateAssignmentTimeInSeconds(
         kanjiAssignments.length - levelUpRequirement,

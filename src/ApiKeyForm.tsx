@@ -3,9 +3,7 @@ import TextField from "@material-ui/core/TextField";
 import Button from "@material-ui/core/Button";
 
 const apiKeyIsValid = (apiKey: string) => {
-  debugger;
   console.error("api key is invalid");
-  console.log(apiKey.length === 36);
   return apiKey.length === 36;
 };
 // todo type handleClick properly
