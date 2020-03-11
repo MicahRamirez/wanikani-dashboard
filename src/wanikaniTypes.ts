@@ -1,4 +1,5 @@
 // TODO Subject is actually a generic type Subject<Kanji | Radical | Vocabulary>
+type subject_type = "kanji" | "radical" | "vocabulary";
 
 export interface LevelProgression {
   abandoned_at: null | string; // Timestamp when the user abandons the level. This is primary used when the user initiates a reset.
@@ -54,6 +55,6 @@ export interface Assignment {
   srs_stage: number; //	The current SRS stage interval, from 0 to 9.
   started_at: string | null; //	Timestamp when the user completes the lesson for the related subject.
   subject_id: number; // Unique identifier of the associated subject.
-  subject_type: string; // The type of the associated subject, one of: kanji, radical, or vocabulary.
+  subject_type: subject_type; // The type of the associated subject, one of: kanji, radical, or vocabulary.
   unlocked_at: string | null; // The timestamp when the related subject has its prerequisites satisfied and is made available in lessons.
 }

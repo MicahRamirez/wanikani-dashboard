@@ -113,7 +113,6 @@ export const filterLevelProgressions = (
 export const getMedianLevelUpInDays = (formattedData: ChartData[]) => {
   const levelUpTimeInDays = formattedData
     .filter(data => {
-      console.log("filtering out an uncompleted level");
       return data.time !== 0;
     })
     .map(data => {

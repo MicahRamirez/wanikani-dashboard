@@ -69,7 +69,6 @@ const parseLocalStorageRoot = () => {
 export const getDataFromStorage = async <T extends unknown>(
   localStorageDataKey: string
 ): Promise<DataStructure<T> | undefined> => {
-  console.log(WanikaniDB.getTable(localStorageDataKey));
   if (WanikaniDB.contains(localStorageDataKey)) {
     return await WanikaniDB.getTable(localStorageDataKey)
       ?.orderBy("id")
