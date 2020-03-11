@@ -94,42 +94,57 @@ const determineKanjiUnlockedByCurrentRadical = (
       // TODO: IF THERE IS ANOTHER RADICAL ASSIGNMENT IN THIS LEVEL THAT IS A COMPONENT OF THIS KANJI WE NEED TO COMPARE THEM.
       // ONLY INCREMENT BY THE BOTTLE NECK
       // IF THERE ARE NO OTHER RADICAL ASSIGNMENTS IN THIS LEVEL FOR THIS KANJI THEN THIS SHOULD INCREASE THE numberUnlocked
-      kanji.component_subject_ids.forEach(radicalId => {
-        if (radicalAssignment.subject_id === 230) {
-          debugger;
-        }
-        // a radical component can be outside the current level(thus undefined in the lookup map), we do not care about these because
-        // they were previously unlocked in another level and we are trying to determine what radical components in THIS LEVEL
-        // unlock particular kanji
-        const radicalCompareTo: Assignment | undefined =
-          radicalIdToRadicalData[radicalId];
-        // make sure we aren't comparing the same kanji
-        if (
-          radicalCompareTo &&
-          radicalAssignment.subject_id !== radicalCompareTo.subject_id
-        ) {
-          if (radicalAssignment.srs_stage < radicalCompareTo.srs_stage) {
-            numberUnlockedKanji++;
-          } else if (
-            radicalCompareTo.srs_stage === radicalAssignment.srs_stage &&
-            radicalAssignment.available_at &&
-            radicalCompareTo.available_at
+      // so for all components in the kanji_component_subject_ids if radicalAssignment is the only one in there then increment
+      const numberOfComponentsFromThisLevel = kanji.component_subject_ids.reduce(
+        (numberSoFar, subject_id) => {
+          if (radicalUnlocksMap[subject_id]) {
+            return numberSoFar + 1;
+          } else {
+            return numberSoFar;
+          }
+        },
+        0
+      );
+      if (numberOfComponentsFromThisLevel === 1) {
+        numberUnlockedKanji++;
+      } else {
+        kanji.component_subject_ids.forEach(radicalId => {
+          if (radicalAssignment.subject_id === 230) {
+            debugger;
+          }
+          // a radical component can be outside the current level(thus undefined in the lookup map), we do not care about these because
+          // they were previously unlocked in another level and we are trying to determine what radical components in THIS LEVEL
+          // unlock particular kanji
+          const radicalCompareTo: Assignment | undefined =
+            radicalIdToRadicalData[radicalId];
+          // make sure we aren't comparing the same kanji
+          if (
+            radicalCompareTo &&
+            radicalAssignment.subject_id !== radicalCompareTo.subject_id
           ) {
-            // same srs stage
-            const isSmaller = DateTime.fromISO(
-              radicalAssignment.available_at
-            ).diff(DateTime.fromISO(radicalCompareTo.available_at), ["seconds"])
-              .seconds;
-            if (isSmaller > 0) {
+            if (radicalAssignment.srs_stage < radicalCompareTo.srs_stage) {
               numberUnlockedKanji++;
+            } else if (
+              radicalCompareTo.srs_stage === radicalAssignment.srs_stage &&
+              radicalAssignment.available_at &&
+              radicalCompareTo.available_at
+            ) {
+              // same srs stage
+              const isSmaller = DateTime.fromISO(
+                radicalAssignment.available_at
+              ).diff(DateTime.fromISO(radicalCompareTo.available_at), [
+                "seconds"
+              ]).seconds;
+              if (isSmaller > 0) {
+                numberUnlockedKanji++;
+              }
             }
           }
-        }
-      });
+        });
+      }
     }
   });
   if (numberUnlockedKanji === 0) {
-    debugger;
     console.warn(
       "this radical assignment does not unlock any kanji by itself?",
       radicalAssignment
