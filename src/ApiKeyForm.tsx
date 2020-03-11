@@ -4,7 +4,6 @@ import Button from "@material-ui/core/Button";
 
 const apiKeyIsValid = (apiKey: string) => {
   console.error("api key is invalid");
-  console.log(apiKey.length === 36);
   return apiKey.length === 36;
 };
 // todo type handleClick properly
@@ -18,7 +17,9 @@ export const ApiKeyForm = ({ saveApiKey }: { saveApiKey: any }) => {
     }
   };
 
-  const handleClick = () => {
+  const handleClick = (e: any) => {
+    // submits form which appends a query param to the url lol
+    e.preventDefault();
     if (!apiKeyIsValid(apiKeyInput)) {
       setShowError(true);
     } else {
