@@ -13,14 +13,11 @@ export default function Index() {
     isClientSide() && localStorage.getItem(API_KEY_LOCAL_STORAGE);
   const [apiKey, setApiKey] = useState(savedApiKey || undefined);
   const saveApiKey = (apiKeyInput: string) => {
-    console.log("setting api key");
     // validate apiKey
-    console.log(apiKeyInput);
     setApiKey(apiKeyInput);
     isClientSide() &&
       typeof apiKeyInput === "string" &&
       localStorage.setItem(API_KEY_LOCAL_STORAGE, apiKeyInput);
-    console.log("handling click");
   };
 
   return (
