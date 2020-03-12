@@ -1,13 +1,15 @@
 import { useState, useEffect, SetStateAction, Dispatch } from "react";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
-import { DateTime } from "luxon";
+
+import { getDataFromStorage, setDataInStorage } from "./localStorageUtils";
 
 export interface apiOptions {
   initialData?: any;
   isPaginated?: boolean;
   axiosConfig: AxiosRequestConfig;
-  localStorageDataKey?: string;
+  localStorageDataKey: string;
   lastUpdated?: string;
+  skip?: boolean;
   mungeFunction?: Function; // needs to be able to handle undef data, single element, or array...
 }
 
@@ -16,6 +18,7 @@ interface WKHookPayload<T> {
   isLoading: boolean;
   isError: boolean;
   doFetch: Dispatch<SetStateAction<string>>;
+  progress: { percentage: number };
 }
 
 export interface WanikaniApiResponse<T> {
@@ -26,15 +29,11 @@ export interface WanikaniApiResponse<T> {
     next_url: string | null; // ref to next page if it exists
     previous_url: string | null; // ref to prev page if it exists
   };
-  total_count?: number;
+  total_count: number;
   data_updated_at: string; // 2020-01-20T11:07:04.987403Z
   data: T[];
 }
 
-interface LocalStoragePayload<T> {
-  utcTimestamp: string;
-  data: WanikaniCollectionWrapper<T>[];
-}
 export interface WanikaniCollectionWrapper<T> {
   id: number;
   object: string;
@@ -49,86 +48,46 @@ export const unwrapCollectionWrapper = <T extends unknown>(
   return wrappedData.map<T>(wrappedElement => wrappedElement.data);
 };
 
-const isLocalStoragePayload = <T extends unknown>(
-  obj: any
-): obj is LocalStoragePayload<T> => {
-  return typeof obj.data === "object" && typeof obj.utcTimestamp === "string";
-};
-
-// parse LS, determine lastUpdated minimum compared to UTC timestamp in LS for localStorageDataKey
-const dataIsFresh = (
-  localStorageDataKey: string,
-  lastUpdated: string = "24h"
-) => {
-  const localStorageData = getDataFromLocalStorage(localStorageDataKey);
-  console.log("lastUpdated", lastUpdated);
-  return localStorageData;
-};
-
-const getDataFromLocalStorage = <T extends unknown>(
-  localStorageDataKey: string
-): LocalStoragePayload<T> | undefined => {
-  // when Storage is undef we are on serverside, exit early
-  if (!typeof Storage) {
-    return;
-  }
-  let localStorageData = localStorage.getItem(localStorageDataKey);
-  if (localStorageData === null) {
-    return;
-  }
-  try {
-    localStorageData = JSON.parse(localStorageData);
-  } catch (error) {
-    console.error("Unable to parse local storage values");
-    return;
-  }
-  if (isLocalStoragePayload<T>(localStorageData)) {
-    return localStorageData;
-  }
-};
-
-const setDataInLocalStorage = <T extends unknown>(
-  data: T[] | T[][] | undefined,
-  localStorageDataKey: string
-) => {
-  // when Storage is undef we are on serverside, exit early
-  if (!typeof Storage) {
-    return;
-  }
-  const utcTimestamp = DateTime.utc();
-  const localStoragePayload = { utcTimestamp: utcTimestamp, data };
-  localStorage.setItem(
-    localStorageDataKey,
-    JSON.stringify(localStoragePayload)
-  );
-};
-
 export const useWKApi = <T extends unknown>(
   initialUrl: string,
   options: apiOptions,
   apiKey: string
 ): WKHookPayload<T>[] => {
-  const [data, setData] = useState<WanikaniCollectionWrapper<T>[]>(
-    options.initialData
-  );
+  const [data, setData] = useState<WanikaniCollectionWrapper<T>[]>([]);
   const [url, setUrl] = useState(initialUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
-  const axiosConfig = {
+  const [progress, setProgress] = useState({
+    percentage: 0
+  });
+  let axiosConfig = {
     ...{
       headers: {
         Authorization: `Bearer ${apiKey}`,
         ...options.axiosConfig.headers
       },
-      timeout: 3000,
+      timeout: 10000,
       ...options.axiosConfig
     }
   };
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = async (modifiedSince: string = "unknown") => {
       setIsError(false);
       setIsLoading(true);
       try {
+        const modifiedSinceHeader =
+          modifiedSince === "unknown"
+            ? {}
+            : { "If-Modified-Since": modifiedSince };
+        axiosConfig = {
+          ...axiosConfig,
+          ...{
+            headers: {
+              ...axiosConfig.headers,
+              ...modifiedSinceHeader
+            }
+          }
+        };
         let result: AxiosResponse<WanikaniApiResponse<T>> = await axios(
           url,
           axiosConfig
@@ -136,49 +95,82 @@ export const useWKApi = <T extends unknown>(
         const accumulatedData = [result.data.data];
         if (options.isPaginated && result.data.pages) {
           let nextPage = result.data.pages.next_url;
+          let itemsSoFar = 0;
           while (nextPage !== null) {
-            result = await axios(nextPage, options.axiosConfig);
-            // push type T onto
+            itemsSoFar = itemsSoFar + result.data.data.length;
+            setProgress({
+              percentage: Math.floor(
+                (itemsSoFar / result.data.total_count) * 100
+              )
+            });
+            result = await axios(nextPage, axiosConfig);
             accumulatedData.push(result.data.data);
+            if (!result.data.pages) {
+              nextPage = null;
+            } else {
+              nextPage = result.data.pages.next_url;
+            }
           }
         }
-        // **** TODO  just need to flatten the data structure in different cases and use the wrapper type*****
         // if data is nested due to pagination flatten
         const dataToSet = accumulatedData.reduce((acc, currentValue) => {
           return [...currentValue, ...acc];
         }, []);
-        if (options.localStorageDataKey) {
-          setDataInLocalStorage(dataToSet, options.localStorageDataKey);
-        }
+        await setDataInStorage(
+          dataToSet as WanikaniCollectionWrapper<T>[],
+          options.localStorageDataKey
+        );
         setData(dataToSet as WanikaniCollectionWrapper<T>[]);
       } catch (error) {
+        // WK Api will return 304s when data has not been updated
+        // catch here and set data that exists in local storage
+        if (JSON.stringify(error.message).includes("304")) {
+          setIsLoading(false);
+          const dataFromLocalStorage = await getDataFromStorage<T>(
+            options.localStorageDataKey
+          );
+          if (dataFromLocalStorage) {
+            setData(dataFromLocalStorage.data);
+            return;
+          } else {
+            console.error("Received 304 from WK API, but data DNE in LS");
+            // TODO: rethrow error to be caught by global error handler
+            // global error because our cache (LS) does not reflect what it should
+          }
+          console.error(
+            "unknown error occurred, rethrowing to global error handler",
+            error.message
+          );
+          throw new Error();
+        }
+        console.warn("there was an errror", error);
         setIsError(true);
       }
       setIsLoading(false);
     };
-    // we want to utilize already requested data from LS if it is fresh enough for the specific API
-    if (
-      options.localStorageDataKey &&
-      dataIsFresh(options.localStorageDataKey, options.lastUpdated)
-    ) {
-      const dataFromLocalStorage = getDataFromLocalStorage<T>(
-        options.localStorageDataKey
+
+    // used for dependent api calls
+    if (options.skip) {
+      return;
+    }
+    // data is cached in LS
+    else if (options.localStorageDataKey) {
+      getDataFromStorage<T>(options.localStorageDataKey).then(
+        dataFromStorage => {
+          fetchData(dataFromStorage?.modifiedSince);
+        }
       );
-      if (dataFromLocalStorage === undefined) {
-        fetchData();
-      } else {
-        setData(dataFromLocalStorage.data);
-      }
     } else {
       fetchData();
     }
-  }, [url]);
+  }, [url, options.skip]);
   return [
     {
       data: options.mungeFunction ? options.mungeFunction(data) : data,
       isLoading,
       isError,
-      doFetch: setUrl
+      doFetch: setUrl,
+      progress
     }
   ];
 };
