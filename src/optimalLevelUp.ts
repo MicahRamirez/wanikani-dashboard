@@ -204,7 +204,6 @@ const calculateAssignmentTimeInSeconds = (
 ) => {
   let requiredSeconds = 0;
   let assignmentUnlockRequirement = unlockRequirement;
-  debugger;
   // each Assignment type is sorted by first available to now AND grouped by their srs bucket
   srsBucketEvaluation: for (
     let srsStage = APPRENTICE_FOUR;

@@ -47,6 +47,12 @@ const getTooltipCopy = (
       return "unknown data key";
   }
 };
+
+// const createTick = (props: any) => {
+//   console.log(props);
+//   return <div className="test">{props.payload.value}</div>;
+// };
+
 const CustomTooltip: React.FC<TooltipProps> = ({ payload, label, active }) => {
   if (!active) {
     return null;
@@ -68,11 +74,59 @@ const CustomTooltip: React.FC<TooltipProps> = ({ payload, label, active }) => {
   );
 };
 
+const getTicksAndDomain = (data: ChartData[], desiredTicks: number) => {
+  // 1m in s, 2w in s, 1w in s, 1d in s
+  const fittings = [
+    2592000 * 1000,
+    1296000 * 1000,
+    648000 * 1000,
+    86400 * 1000
+  ];
+  const fittingsTicks: number[][] = [[], [], [], []];
+  // domain = MIN, MAX
+  const domain = data.reduce(
+    (domain, elem) => {
+      if (elem.time < domain[0]) {
+        domain[0] = elem.time;
+      } else if (elem.time > domain[1]) {
+        domain[1] = elem.time;
+      }
+      return domain;
+    },
+    [data[0].time, data[0].time]
+  );
+  console.log(domain);
+  for (let i = 0; i < fittings.length; i++) {
+    const currentFitting = fittings[i];
+    const currentFittingArray = fittingsTicks[i];
+    let start = domain[0];
+    while (fittingsTicks[i].length <= desiredTicks - 1 && start < domain[1]) {
+      currentFittingArray.push(start);
+      start += currentFitting;
+    }
+  }
+  let selectedFitting = fittingsTicks[0];
+  for (let i = 0; i < fittingsTicks.length; i++) {
+    const diffWithEndpoint =
+      domain[1] - selectedFitting[selectedFitting.length - 1];
+    if (
+      domain[1] - fittingsTicks[i][fittingsTicks[i].length - 1] <
+      diffWithEndpoint
+    ) {
+      selectedFitting = fittingsTicks[i];
+    }
+  }
+  return { domain: domain, ticks: selectedFitting };
+};
+
 /**
  */
 export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
   chartData
 }) => {
+  const NUMBER_OF_TICKS = 10;
+  const { ticks, domain } = getTicksAndDomain(chartData, NUMBER_OF_TICKS);
+  console.log(ticks, domain);
   // Mean: What is the average level up time
   // Median: What is the time of the average level up
   // Fastest Possible:
@@ -85,20 +139,26 @@ export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
 
           <XAxis
             type="number"
-            scale="time"
-            dataKey={"time"}
-            domain={["auto", "auto"]}
-            tickFormatter={unixTime => {
-              return DateTime.fromMillis(unixTime).toLocaleString(
-                DateTime.DATETIME_FULL
-              );
-            }}
-            tickCount={20}
-            interval={"preserveStartEnd"}
+            dataKey="time"
+            domain={domain as any}
+            ticks={ticks}
+            // tick={createTick}
+            interval={0}
+            angle={30}
+            dx={20}
+            // tickFormatter={unixTime => {
+            //   console.log("tet");
+            //   const formatted = DateTime.fromMillis(unixTime).toFormat("f");
+            //   if (!formatted) {
+            //     console.log("wtf");
+            //   }
+            //   return formatted;
+            // }}
           />
           <YAxis
             type="number"
-            domain={[5, "dataMax"]}
+            domain={[1, 60]}
+            ticks={[1, 10, 20, 30, 40, 50, 60]}
             dataKey={obj => {
               if (obj.averageLevel) {
                 return obj.averageLevel;
