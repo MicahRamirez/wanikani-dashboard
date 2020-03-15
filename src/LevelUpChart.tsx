@@ -93,6 +93,8 @@ export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
                 DateTime.DATETIME_FULL
               );
             }}
+            tickCount={20}
+            interval={"preserveStartEnd"}
           />
           <YAxis
             type="number"

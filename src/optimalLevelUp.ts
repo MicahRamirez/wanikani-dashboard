@@ -204,6 +204,7 @@ const calculateAssignmentTimeInSeconds = (
 ) => {
   let requiredSeconds = 0;
   let assignmentUnlockRequirement = unlockRequirement;
+  debugger;
   // each Assignment type is sorted by first available to now AND grouped by their srs bucket
   srsBucketEvaluation: for (
     let srsStage = APPRENTICE_FOUR;
@@ -248,7 +249,8 @@ const calculateAssignmentTimeInSeconds = (
           requiredSeconds += secondsFromNow;
           break srsBucketEvaluation;
         }
-      } else if (i + 1 === assignmentsBySrsStage[srsStage].length) {
+      }
+      if (i + 1 === assignmentsBySrsStage[srsStage].length) {
         if (currentLevel && FAST_LEVELS[currentLevel]) {
           requiredSeconds += SRS_STAGES[srsStage].accelerated_interval;
         } else {
