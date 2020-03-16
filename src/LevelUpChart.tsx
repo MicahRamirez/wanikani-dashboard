@@ -48,10 +48,23 @@ const getTooltipCopy = (
   }
 };
 
-// const createTick = (props: any) => {
-//   console.log(props);
-//   return <div className="test">{props.payload.value}</div>;
-// };
+export const TiltedAxisTick = (props: any) => {
+  const { x, y, payload } = props;
+  return (
+    <g className=".test" transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={16}
+        textAnchor="end"
+        fill="#666"
+        transform="rotate(-45)"
+      >
+        {DateTime.fromMillis(payload.value).toFormat("LLL y")}
+      </text>
+    </g>
+  );
+};
 
 const CustomTooltip: React.FC<TooltipProps> = ({ payload, label, active }) => {
   if (!active) {
@@ -141,19 +154,15 @@ export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
             type="number"
             dataKey="time"
             domain={domain as any}
-            ticks={ticks}
-            // tick={createTick}
-            interval={0}
-            angle={30}
-            dx={20}
-            // tickFormatter={unixTime => {
-            //   console.log("tet");
-            //   const formatted = DateTime.fromMillis(unixTime).toFormat("f");
-            //   if (!formatted) {
-            //     console.log("wtf");
-            //   }
-            //   return formatted;
-            // }}
+            // tick={<TiltedAxisTick />}
+            tickFormatter={unixTime => {
+              console.log("tet");
+              const formatted = DateTime.fromMillis(unixTime).toFormat("f");
+              if (!formatted) {
+                console.log("wtf");
+              }
+              return formatted;
+            }}
           />
           <YAxis
             type="number"
