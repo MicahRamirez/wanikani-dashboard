@@ -7,13 +7,15 @@
     "axios": "^0.19.1",
     "clsx": "latest",
     "dexie": "^2.0.4",
+    "highcharts": "^8.0.4",
+    "highcharts-react-official": "^3.0.0",
     "luxon": "^1.22.0",
     "next": "latest",
     "qs": "^6.9.1",
     "react": "latest",
     "react-dom": "latest",
     "react-use": "^13.26.4",
-    "recharts": "^2.0.0-beta.1"
+    "recharts": "^2.0.0-beta.2"
   },
   "scripts": {
     "dev": "next",

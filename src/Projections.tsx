@@ -1,5 +1,4 @@
 import React from "react";
-import CircularProgress from "@material-ui/core/CircularProgress";
 import LinearProgress from "@material-ui/core/LinearProgress";
 import Paper from "@material-ui/core/Paper";
 import { makeStyles } from "@material-ui/core/styles";
@@ -131,11 +130,9 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
         <LinearProgress value={subjectProgress.percentage} />
         <span>Assignment Progress</span>
         <LinearProgress value={assignmentProgress.percentage} />
-        <CircularProgress />
       </div>
     );
   }
-  console.log("minutes", minutes);
   return (
     <div className={classes.root}>
       <Grid container spacing={3}>

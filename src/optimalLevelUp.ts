@@ -248,7 +248,8 @@ const calculateAssignmentTimeInSeconds = (
           requiredSeconds += secondsFromNow;
           break srsBucketEvaluation;
         }
-      } else if (i + 1 === assignmentsBySrsStage[srsStage].length) {
+      }
+      if (i + 1 === assignmentsBySrsStage[srsStage].length) {
         if (currentLevel && FAST_LEVELS[currentLevel]) {
           requiredSeconds += SRS_STAGES[srsStage].accelerated_interval;
         } else {

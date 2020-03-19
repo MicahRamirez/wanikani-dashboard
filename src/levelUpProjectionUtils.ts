@@ -17,6 +17,11 @@ export interface ChartData {
   type: "average" | "recorded" | "median" | "optimal" | "userpace";
 }
 
+export const AVERAGE_LEVEL_DATA_KEY = "averageLevel";
+export const OBSERVED_LEVEL_DATA_KEY = "level";
+export const MEDIAN_LEVEL_DATA_KEY = "medianLevel";
+export const OPTIMAL_LEVEL_DATA_KEY = "optimalLevel";
+
 const getAverageLevelUpInDays = (obj: ChartData[]): number => {
   return (
     obj.reduce<number>((acc, curr) => {
@@ -186,7 +191,7 @@ export const analyzeLevelProgressions = (
     const previousMedianProjection = medianProjection[previousMedianIdx];
     const previousOptimalProjection = optimalProjection[previousOptimalIdx];
     averageProjection.push({
-      averageLevel: i,
+      [AVERAGE_LEVEL_DATA_KEY]: i,
       startedAt: previousAverageProjection.completedAt,
       completedAt: previousAverageProjection.completedAt.plus({
         days: projections[0].days.normal
@@ -200,7 +205,7 @@ export const analyzeLevelProgressions = (
     });
 
     medianProjection.push({
-      medianLevel: i,
+      [MEDIAN_LEVEL_DATA_KEY]: i,
       startedAt: previousMedianProjection.completedAt,
       completedAt: previousMedianProjection.completedAt.plus({
         days: projections[1].days.normal
@@ -213,7 +218,7 @@ export const analyzeLevelProgressions = (
       type: projections[1].type
     });
     optimalProjection.push({
-      optimalLevel: i,
+      [OPTIMAL_LEVEL_DATA_KEY]: i,
       startedAt: previousOptimalProjection.completedAt,
       completedAt: previousOptimalProjection.completedAt.plus({
         days: FAST_LEVELS[i]
