@@ -34,7 +34,6 @@ const getTooltipCopy = (
   dataKey: TooltipPayload["dataKey"],
   value: TooltipPayload["value"]
 ) => {
-  // TODO import data keys from the associated utils so don't have to rely on hardcoded strings
   switch (dataKey) {
     case OPTIMAL_LEVEL_DATA_KEY:
       return `Projected Optimal Level: ${value}`;
@@ -148,10 +147,10 @@ const recursiveMethod = (
 };
 
 const LABEL_COPY: { [labelKey: string]: string } = {
-  averageLevel: "Average Level Projection",
+  average: "Average Level Projection",
   level: "Observed Level",
-  medianLevel: "Median Level Projection",
-  optimalLevel: "Optimal Level Projection"
+  median: "Median Level Projection",
+  optimal: "Optimal Level Projection"
 };
 export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
   chartData
@@ -179,12 +178,12 @@ export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
         let level = 0;
         if (elem.level) {
           level = elem.level;
-        } else if (elem.medianLevel) {
-          level = elem.medianLevel;
-        } else if (elem.optimalLevel) {
-          level = elem.optimalLevel;
-        } else if (elem.averageLevel) {
-          level = elem.averageLevel;
+        } else if (elem.median) {
+          level = elem.median;
+        } else if (elem.optimal) {
+          level = elem.optimal;
+        } else if (elem.average) {
+          level = elem.average;
         }
         return {
           level
@@ -258,10 +257,10 @@ export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
             domain={yAxisDomain as any}
             ticks={yAxisTicks}
             dataKey={obj => {
-              if (obj.averageLevel) {
-                return obj.averageLevel;
-              } else if (obj.medianLevel) {
-                return obj.medianLevel;
+              if (obj.average) {
+                return obj.average;
+              } else if (obj.median) {
+                return obj.median;
               } else if (obj.type === "recorded") {
                 return obj.level;
               }
@@ -280,10 +279,10 @@ export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
               return <span>{LABEL_COPY[value]}</span>;
             }}
           />
-          <Line type="natural" dataKey="averageLevel" stroke="green" />
+          <Line type="natural" dataKey="average" stroke="green" />
           <Line type="natural" dataKey="level" stroke="blue" />
-          <Line type="natural" dataKey="medianLevel" stroke="orange" />
-          <Line type="natural" dataKey="optimalLevel" stroke="red" />
+          <Line type="natural" dataKey="median" stroke="orange" />
+          <Line type="natural" dataKey="optimal" stroke="red" />
         </LineChart>
       </ResponsiveContainer>
     </div>

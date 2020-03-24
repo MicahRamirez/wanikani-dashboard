@@ -100,7 +100,6 @@ const createExistenceMap = (assignmentArray: Assignment[]) => {
 };
 
 // determines the number of kanji that are unlocked by the GURU'ing of each radical assignment
-// TODO: FURTHER ELABORATE ON WHY THIS IS TRICKY
 const determineKanjiUnlockedByCurrentRadical = (
   radicalAssignment: Assignment,
   radicalUnlocksMap: { [radicalId: number]: number[] },

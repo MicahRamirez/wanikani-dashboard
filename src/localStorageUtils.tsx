@@ -3,19 +3,6 @@ import { WanikaniDB } from "./WanikaniDB";
 
 const LOCALSTORAGE_ROOT = "root";
 
-/**
- *
- * {
- *  apiDs0: {
- *     updatedAt: string
- *     data: any
- *   },
- *  apiDsN: {...},
- * }
- *  apiDs0 key should reflect the api call ?
- *
- *
- */
 export interface WanikaniCollectionWrapper<T> {
   id: number;
   object: string;
