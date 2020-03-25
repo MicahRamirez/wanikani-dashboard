@@ -1,9 +1,7 @@
 import React from "react";
 import LinearProgress from "@material-ui/core/LinearProgress";
-import Paper from "@material-ui/core/Paper";
 import { makeStyles } from "@material-ui/core/styles";
 import Grid from "@material-ui/core/Grid";
-import { DateTime } from "luxon";
 
 import {
   analyzeLevelProgressions,
@@ -23,6 +21,7 @@ import {
 } from "./constants";
 import { LevelUpChart } from "./LevelUpChart";
 import { calculateFastestLevelUpTime } from "./optimalLevelUp";
+import { ProjectionsQuickStats } from "./ProjectionQuickStats";
 
 const useStyles = makeStyles(_ => ({
   root: {
@@ -30,7 +29,7 @@ const useStyles = makeStyles(_ => ({
   }
 }));
 
-export const Projections = ({ apiKey }: { apiKey: string }) => {
+export const ProjectionsUI = ({ apiKey }: { apiKey: string }) => {
   // *should* yield all level progressions, including those from past resets
   const [{ data, isLoading }] = useWKApi<LevelProgression>(
     LEVEL_PROGRESSIONS_API_URL,
@@ -53,7 +52,8 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
   const { mostRecentResetTimeStamp, targetLevel } = analyzeResetData(resetData);
   const {
     formattedDataWithProjections,
-    currentLevel
+    currentLevel,
+    projections
   } = analyzeLevelProgressions(data, {
     mostRecentResetTimeStamp,
     targetLevel
@@ -93,26 +93,20 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
         method: "GET",
         responseType: "json",
         params: {
-          levels: `${currentLevel}`
+          levels: `${currentLevel}`,
+          unlocked: "true"
         }
       },
-      localStorageDataKey: `${ASSIGNMENTS_LOCAL_STORAGE_KEY}?levels=${currentLevel}`
+      localStorageDataKey: `${ASSIGNMENTS_LOCAL_STORAGE_KEY}?levels=${currentLevel}&unlocked=true`
     },
     apiKey
   );
   const classes = useStyles();
-  const fastestLevelUpTime = calculateFastestLevelUpTime(
+  const minimumTimeToLevelInSeconds = calculateFastestLevelUpTime(
     levelUpAssignments,
     currentKanjiSubjects,
     currentLevel
   );
-  const { days, hours, minutes } = DateTime.local()
-    .plus({ seconds: fastestLevelUpTime })
-    .diffNow(["days", "hours", "minutes"])
-    .toObject();
-  const fastestLevelUpDate = DateTime.local()
-    .plus({ seconds: fastestLevelUpTime })
-    .toFormat("ff");
   if (
     isLoading ||
     resetDataIsLoading ||
@@ -127,33 +121,36 @@ export const Projections = ({ apiKey }: { apiKey: string }) => {
     return (
       <div>
         <span>Subject Progress</span>
-        <LinearProgress value={subjectProgress.percentage} />
+        <LinearProgress
+          variant="determinate"
+          value={subjectProgress.percentage}
+        />
         <span>Assignment Progress</span>
-        <LinearProgress value={assignmentProgress.percentage} />
+        <LinearProgress
+          variant="determinate"
+          value={assignmentProgress.percentage}
+        />
       </div>
     );
   }
+
   return (
     <div className={classes.root}>
       <Grid container spacing={3}>
-        <Grid container item xs={12} spacing={10}>
-          <Grid item xs={4} spacing={1}>
-            <Paper elevation={3}>
-              <span>Fastest time to level up</span>
-              <br />
-              {`${days}D ${hours}H ${
-                minutes !== undefined ? Math.ceil(minutes) : "unknown"
-              }M`}
-              <br />
-              <span>{fastestLevelUpDate}</span>
-            </Paper>
-          </Grid>
-          <Grid item xs={4} spacing={1}>
-            <Paper elevation={3}>Estimated time to level up</Paper>
-          </Grid>
-          <Grid item xs={4} spacing={1}>
-            <Paper elevation={3}>Average Accuracy of Current Level Kanji</Paper>
-          </Grid>
+        <Grid container item xs={12}>
+          {currentLevel &&
+          projections &&
+          formattedDataWithProjections &&
+          minimumTimeToLevelInSeconds ? (
+            <ProjectionsQuickStats
+              currentLevel={currentLevel}
+              projections={projections}
+              chartData={formattedDataWithProjections}
+              minimumTimeToLevelInSeconds={minimumTimeToLevelInSeconds}
+            />
+          ) : (
+            <span>Unable to load quickstats</span>
+          )}
         </Grid>
         <Grid item xs={12}>
           {formattedDataWithProjections.length > 1 && (

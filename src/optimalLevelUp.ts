@@ -313,6 +313,7 @@ export const calculateFastestLevelUpTime = (
     groupBySrsStage,
     newSrsBuckets()
   );
+  console.log("radicalAssignments for this level", radicalAssignments);
   const radicalsBySrsStage = radicalAssignments.reduce<SrsBuckets>(
     groupBySrsStage,
     newSrsBuckets()

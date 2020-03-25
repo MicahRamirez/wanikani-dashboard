@@ -125,12 +125,13 @@ export const useWKApi = <T extends unknown>(
         // WK Api will return 304s when data has not been updated
         // catch here and set data that exists in local storage
         if (JSON.stringify(error.message).includes("304")) {
-          setIsLoading(false);
+          setProgress({ percentage: 100 });
           const dataFromLocalStorage = await getDataFromStorage<T>(
             options.localStorageDataKey
           );
           if (dataFromLocalStorage) {
             setData(dataFromLocalStorage.data);
+            setIsLoading(false);
             return;
           } else {
             console.error("Received 304 from WK API, but data DNE in LS");

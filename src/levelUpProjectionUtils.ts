@@ -57,10 +57,6 @@ const createProjection = (
       break;
     default:
       if (FAST_LEVELS[level]) {
-        console.log(
-          "projection accelerated",
-          projections[projectionType].days.accelerated
-        );
         const {
           optimalLongInDays,
           optimalShortInDays
@@ -70,10 +66,6 @@ const createProjection = (
         const projectedAcceleratedDays =
           deviationFromOptimal * optimalShortInDays;
         completedAt = data.completedAt.plus({ days: projectedAcceleratedDays });
-        console.log(
-          "projection CALCULATED accelerated",
-          projectedAcceleratedDays
-        );
       }
   }
   return {
@@ -262,5 +254,10 @@ export const analyzeLevelProgressions = (
     ...medianProjection,
     ...optimalProjection
   ];
-  return { formattedDataWithProjections, averageLevelUpInDays, currentLevel };
+  return {
+    formattedDataWithProjections,
+    averageLevelUpInDays,
+    currentLevel,
+    projections
+  };
 };

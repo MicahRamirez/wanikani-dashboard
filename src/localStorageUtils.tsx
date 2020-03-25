@@ -40,7 +40,6 @@ const parseLocalStorageRoot = () => {
   let localStorageRoot = localStorage.getItem(LOCALSTORAGE_ROOT);
 
   if (!localStorageRoot) {
-    console.log("localstorage did not exit", localStorageRoot);
     localStorage.setItem(LOCALSTORAGE_ROOT, JSON.stringify(rootStructure));
     return rootStructure;
   }
