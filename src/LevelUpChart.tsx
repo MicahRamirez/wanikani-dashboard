@@ -8,12 +8,17 @@ import {
   Line,
   LineChart,
   CartesianGrid,
-  TooltipPayload
+  TooltipPayload,
+  ReferenceLine
 } from "recharts";
 import { DateTime } from "luxon";
 import Paper from "@material-ui/core/Paper";
 import Typography from "@material-ui/core/Typography";
+import ToggleButton from "@material-ui/lab/ToggleButton";
+import ToggleButtonGroup from "@material-ui/lab/ToggleButtonGroup";
 import Box from "@material-ui/core/Box";
+import ZoomInIcon from "@material-ui/icons/ZoomIn";
+import ZoomOutIcon from "@material-ui/icons/ZoomOut";
 import { useWindowSize } from "react-use";
 
 import {
@@ -34,7 +39,6 @@ const getTooltipCopy = (
   dataKey: TooltipPayload["dataKey"],
   value: TooltipPayload["value"]
 ) => {
-  // TODO import data keys from the associated utils so don't have to rely on hardcoded strings
   switch (dataKey) {
     case OPTIMAL_LEVEL_DATA_KEY:
       return `Projected Optimal Level: ${value}`;
@@ -148,25 +152,31 @@ const recursiveMethod = (
 };
 
 const LABEL_COPY: { [labelKey: string]: string } = {
-  averageLevel: "Average Level Projection",
+  average: "Average Level Projection",
   level: "Observed Level",
-  medianLevel: "Median Level Projection",
-  optimalLevel: "Optimal Level Projection"
+  median: "Median Level Projection",
+  optimal: "Optimal Level Projection"
 };
 export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
   chartData
 }) => {
+  const [zoom, setZoom] = React.useState("small");
+  const handleZoom = (_: any, newZoom: "small" | "large") => {
+    if (newZoom !== null) {
+      setZoom(newZoom);
+    }
+  };
   const { width } = useWindowSize();
   let data = chartData;
   let xAxisDomain = [0, 0];
   let yAxisDomain = [61, 0];
   let yAxisTicks = [1, 10, 20, 30, 40, 50, 60];
-  if (width < 1080) {
+  if (width < 1080 || zoom === "small") {
     const domainStart = DateTime.local()
-      .minus({ weeks: 3 })
+      .minus({ months: 1 })
       .toMillis();
     const domainEnd = DateTime.local()
-      .plus({ months: 1.5 })
+      .plus({ months: 2 })
       .toMillis();
     xAxisDomain = [domainStart, domainEnd];
     data = data.filter(dataToRender => {
@@ -179,12 +189,12 @@ export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
         let level = 0;
         if (elem.level) {
           level = elem.level;
-        } else if (elem.medianLevel) {
-          level = elem.medianLevel;
-        } else if (elem.optimalLevel) {
-          level = elem.optimalLevel;
-        } else if (elem.averageLevel) {
-          level = elem.averageLevel;
+        } else if (elem.median) {
+          level = elem.median;
+        } else if (elem.optimal) {
+          level = elem.optimal;
+        } else if (elem.average) {
+          level = elem.average;
         }
         return {
           level
@@ -238,54 +248,105 @@ export const LevelUpChart: React.FC<{ chartData: ChartData[] }> = ({
   // Fastest Possible:
   // Optimal: Given your current pace on the current level
   return (
-    <div>
-      <ResponsiveContainer width={"95%"} height={500}>
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
+    <Paper elevation={3}>
+      <div style={{ paddingTop: "26px", paddingRight: "26px" }}>
+        <ResponsiveContainer height={500}>
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
 
-          <XAxis
-            type="number"
-            dataKey="time"
-            domain={xAxisDomain as any}
-            interval={0}
-            height={100}
-            width={100}
-            ticks={actualTicks}
-            tick={props => <TiltedAxisTick {...props} screenWidth={width} />}
-          />
-          <YAxis
-            type="number"
-            domain={yAxisDomain as any}
-            ticks={yAxisTicks}
-            dataKey={obj => {
-              if (obj.averageLevel) {
-                return obj.averageLevel;
-              } else if (obj.medianLevel) {
-                return obj.medianLevel;
-              } else if (obj.type === "recorded") {
-                return obj.level;
-              }
+            <XAxis
+              type="number"
+              dataKey="time"
+              domain={xAxisDomain as any}
+              interval={0}
+              height={100}
+              width={100}
+              ticks={actualTicks}
+              tick={props => <TiltedAxisTick {...props} screenWidth={width} />}
+            />
+            <YAxis
+              type="number"
+              domain={yAxisDomain as any}
+              ticks={yAxisTicks}
+              dataKey={obj => {
+                if (obj.average) {
+                  return obj.average;
+                } else if (obj.median) {
+                  return obj.median;
+                } else if (obj.type === "recorded") {
+                  return obj.level;
+                }
+              }}
+            />
+            <Tooltip
+              content={(props: TooltipProps) => {
+                if (!props) {
+                  return null;
+                }
+                return <CustomTooltip {...props} />;
+              }}
+            />
+            <Legend
+              wrapperStyle={{ paddingBottom: "26px", marginLeft: "26px" }}
+              formatter={(value, _) => {
+                return <span>{LABEL_COPY[value]}</span>;
+              }}
+            />
+            <ReferenceLine
+              x={DateTime.local().toMillis()}
+              stroke="red"
+              label={`今日 - ${DateTime.local().toFormat("LLL dd")}`}
+            />
+            <Line
+              type="natural"
+              dataKey="average"
+              stroke="green"
+              isAnimationActive={false}
+            />
+            <Line
+              type="natural"
+              dataKey="level"
+              stroke="blue"
+              isAnimationActive={false}
+            />
+            <Line
+              type="natural"
+              dataKey="median"
+              stroke="orange"
+              isAnimationActive={false}
+            />
+            <Line
+              type="natural"
+              dataKey="optimal"
+              stroke="red"
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+        {width > 1080 && (
+          <Box
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              paddingBottom: "12px"
             }}
-          />
-          <Tooltip
-            content={(props: TooltipProps) => {
-              if (!props) {
-                return null;
-              }
-              return <CustomTooltip {...props} />;
-            }}
-          />
-          <Legend
-            formatter={(value, _) => {
-              return <span>{LABEL_COPY[value]}</span>;
-            }}
-          />
-          <Line type="natural" dataKey="averageLevel" stroke="green" />
-          <Line type="natural" dataKey="level" stroke="blue" />
-          <Line type="natural" dataKey="medianLevel" stroke="orange" />
-          <Line type="natural" dataKey="optimalLevel" stroke="red" />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+          >
+            <ToggleButtonGroup
+              value={zoom}
+              exclusive
+              onChange={handleZoom}
+              aria-label="graph zoom"
+            >
+              <ToggleButton value="small" aria-label="small-zoom">
+                <ZoomInIcon />
+              </ToggleButton>
+              <ToggleButton value="large" aria-label="large-zoom">
+                <ZoomOutIcon />
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+        )}
+      </div>
+    </Paper>
   );
 };

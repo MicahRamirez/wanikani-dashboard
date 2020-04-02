@@ -3,19 +3,6 @@ import { WanikaniDB } from "./WanikaniDB";
 
 const LOCALSTORAGE_ROOT = "root";
 
-/**
- *
- * {
- *  apiDs0: {
- *     updatedAt: string
- *     data: any
- *   },
- *  apiDsN: {...},
- * }
- *  apiDs0 key should reflect the api call ?
- *
- *
- */
 export interface WanikaniCollectionWrapper<T> {
   id: number;
   object: string;
@@ -53,7 +40,6 @@ const parseLocalStorageRoot = () => {
   let localStorageRoot = localStorage.getItem(LOCALSTORAGE_ROOT);
 
   if (!localStorageRoot) {
-    console.log("localstorage did not exit", localStorageRoot);
     localStorage.setItem(LOCALSTORAGE_ROOT, JSON.stringify(rootStructure));
     return rootStructure;
   }

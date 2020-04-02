@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Container from "@material-ui/core/Container";
 
 import { ApiKeyForm } from "../src/ApiKeyForm";
-import { Projections } from "../src/Projections";
+import { ProjectionsUI } from "../src/Projections";
 
 const API_KEY_LOCAL_STORAGE = "apiKey";
 
@@ -25,7 +25,7 @@ export default function Index() {
       {`Your api key ${apiKey}`}
       {!apiKey && <ApiKeyForm saveApiKey={saveApiKey} />}
 
-      {apiKey && <Projections apiKey={apiKey} />}
+      {apiKey && <ProjectionsUI apiKey={apiKey} />}
     </Container>
   );
 }

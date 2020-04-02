@@ -11,16 +11,20 @@ export interface ChartData {
   completedAt: DateTime;
   startedAt: DateTime;
   time: number; // ms since epoch
-  averageLevel?: number;
-  medianLevel?: number;
-  optimalLevel?: number;
+  average?: number;
+  median?: number;
+  optimal?: number;
   type: "average" | "recorded" | "median" | "optimal" | "userpace";
 }
 
-export const AVERAGE_LEVEL_DATA_KEY = "averageLevel";
+export const AVERAGE_LEVEL_DATA_KEY = "average";
 export const OBSERVED_LEVEL_DATA_KEY = "level";
-export const MEDIAN_LEVEL_DATA_KEY = "medianLevel";
-export const OPTIMAL_LEVEL_DATA_KEY = "optimalLevel";
+export const MEDIAN_LEVEL_DATA_KEY = "median";
+export const OPTIMAL_LEVEL_DATA_KEY = "optimal";
+
+export interface Projections {
+  [projectionType: string]: { days: { normal: number; accelerated: number } };
+}
 
 const getAverageLevelUpInDays = (obj: ChartData[]): number => {
   return (
@@ -31,6 +35,46 @@ const getAverageLevelUpInDays = (obj: ChartData[]): number => {
       return acc;
     }, 0) / obj.length
   );
+};
+
+const createProjection = (
+  data: ChartData,
+  projectionType: "average" | "median" | "optimal" | "recorded",
+  projections: Projections,
+  level: number
+) => {
+  let completedAt = data.completedAt.plus({
+    days: projections[projectionType].days.normal
+  });
+
+  switch (projectionType) {
+    case "optimal":
+      if (FAST_LEVELS[level]) {
+        completedAt = data.completedAt.plus({
+          days: projections[projectionType].days.accelerated
+        });
+      }
+      break;
+    default:
+      if (FAST_LEVELS[level]) {
+        const {
+          optimalLongInDays,
+          optimalShortInDays
+        } = calculateOptimalLevelUp();
+        const deviationFromOptimal =
+          projections[projectionType].days.normal / optimalLongInDays;
+        const projectedAcceleratedDays =
+          deviationFromOptimal * optimalShortInDays;
+        completedAt = data.completedAt.plus({ days: projectedAcceleratedDays });
+      }
+  }
+  return {
+    startedAt: data.completedAt,
+    completedAt: completedAt, // data.completedAt shifted by the average, median, or optimal
+    time: completedAt.valueOf(),
+    type: projectionType,
+    [projectionType]: level
+  };
 };
 
 export const formatLevelProgressions = (
@@ -162,22 +206,18 @@ export const analyzeLevelProgressions = (
   const medianLevelUpInDays: number = getMedianLevelUpInDays(formattedData);
   const { optimalLongInDays, optimalShortInDays } = calculateOptimalLevelUp();
   const projections: {
-    days: { normal: number; accelerated: number };
-    type: "average" | "median" | "optimal" | "recorded";
-  }[] = [
-    {
-      days: { normal: averageLevelUpInDays, accelerated: averageLevelUpInDays },
-      type: "average"
+    [projectionType: string]: { days: { normal: number; accelerated: number } };
+  } = {
+    average: {
+      days: { normal: averageLevelUpInDays, accelerated: averageLevelUpInDays }
     },
-    {
-      days: { normal: medianLevelUpInDays, accelerated: medianLevelUpInDays },
-      type: "median"
+    median: {
+      days: { normal: medianLevelUpInDays, accelerated: medianLevelUpInDays }
     },
-    {
-      days: { normal: optimalLongInDays, accelerated: optimalShortInDays },
-      type: "optimal"
+    optimal: {
+      days: { normal: optimalLongInDays, accelerated: optimalShortInDays }
     }
-  ];
+  };
   // sketch, but we know the last piece of data on this struct is defined
   const currentLevel = formattedData[formattedData.length - 1].level as number;
   const averageProjection = [...[formattedData[formattedData.length - 1]]];
@@ -190,50 +230,16 @@ export const analyzeLevelProgressions = (
     const previousAverageProjection = averageProjection[previousAverageIdx];
     const previousMedianProjection = medianProjection[previousMedianIdx];
     const previousOptimalProjection = optimalProjection[previousOptimalIdx];
-    averageProjection.push({
-      [AVERAGE_LEVEL_DATA_KEY]: i,
-      startedAt: previousAverageProjection.completedAt,
-      completedAt: previousAverageProjection.completedAt.plus({
-        days: projections[0].days.normal
-      }),
-      time: previousAverageProjection.completedAt
-        .plus({
-          days: projections[0].days.normal
-        })
-        .valueOf(),
-      type: projections[0].type
-    });
+    averageProjection.push(
+      createProjection(previousAverageProjection, "average", projections, i)
+    );
 
-    medianProjection.push({
-      [MEDIAN_LEVEL_DATA_KEY]: i,
-      startedAt: previousMedianProjection.completedAt,
-      completedAt: previousMedianProjection.completedAt.plus({
-        days: projections[1].days.normal
-      }),
-      time: previousMedianProjection.completedAt
-        .plus({
-          days: projections[1].days.normal
-        })
-        .valueOf(),
-      type: projections[1].type
-    });
-    optimalProjection.push({
-      [OPTIMAL_LEVEL_DATA_KEY]: i,
-      startedAt: previousOptimalProjection.completedAt,
-      completedAt: previousOptimalProjection.completedAt.plus({
-        days: FAST_LEVELS[i]
-          ? projections[2].days.accelerated
-          : projections[2].days.normal
-      }),
-      time: previousOptimalProjection.completedAt
-        .plus({
-          days: FAST_LEVELS[i]
-            ? projections[2].days.accelerated
-            : projections[2].days.normal
-        })
-        .valueOf(),
-      type: projections[2].type
-    });
+    medianProjection.push(
+      createProjection(previousMedianProjection, "median", projections, i)
+    );
+    optimalProjection.push(
+      createProjection(previousOptimalProjection, "optimal", projections, i)
+    );
     previousAverageIdx++;
     previousMedianIdx++;
     previousOptimalIdx++;
@@ -248,5 +254,10 @@ export const analyzeLevelProgressions = (
     ...medianProjection,
     ...optimalProjection
   ];
-  return { formattedDataWithProjections, averageLevelUpInDays, currentLevel };
+  return {
+    formattedDataWithProjections,
+    averageLevelUpInDays,
+    currentLevel,
+    projections
+  };
 };

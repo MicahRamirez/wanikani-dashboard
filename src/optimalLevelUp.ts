@@ -100,7 +100,6 @@ const createExistenceMap = (assignmentArray: Assignment[]) => {
 };
 
 // determines the number of kanji that are unlocked by the GURU'ing of each radical assignment
-// TODO: FURTHER ELABORATE ON WHY THIS IS TRICKY
 const determineKanjiUnlockedByCurrentRadical = (
   radicalAssignment: Assignment,
   radicalUnlocksMap: { [radicalId: number]: number[] },
@@ -314,6 +313,7 @@ export const calculateFastestLevelUpTime = (
     groupBySrsStage,
     newSrsBuckets()
   );
+  console.log("radicalAssignments for this level", radicalAssignments);
   const radicalsBySrsStage = radicalAssignments.reduce<SrsBuckets>(
     groupBySrsStage,
     newSrsBuckets()
