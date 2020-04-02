@@ -141,7 +141,7 @@ export const ProjectionsUI = ({ apiKey }: { apiKey: string }) => {
           {currentLevel &&
           projections &&
           formattedDataWithProjections &&
-          minimumTimeToLevelInSeconds ? (
+          minimumTimeToLevelInSeconds !== undefined ? (
             <ProjectionsQuickStats
               currentLevel={currentLevel}
               projections={projections}
