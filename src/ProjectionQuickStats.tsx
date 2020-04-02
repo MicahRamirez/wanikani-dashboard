@@ -54,10 +54,29 @@ export const ProjectionsQuickStats: React.FC<ProjectionQuickStats> = ({
   chartData,
   minimumTimeToLevelInSeconds
 }) => {
-  const fastestLevelUpObject = DateTime.local()
-    .plus({ seconds: minimumTimeToLevelInSeconds })
-    .diffNow(["days", "hours", "minutes", "seconds"])
-    .toObject();
+  let fastestLevelUpCopy;
+  if (minimumTimeToLevelInSeconds <= 0) {
+    fastestLevelUpCopy = "You could level up now :)";
+  } else {
+    const fastestLevelUpObject = DateTime.local()
+      .plus({ seconds: minimumTimeToLevelInSeconds })
+      .diffNow(["days", "hours", "minutes", "seconds"])
+      .toObject();
+    fastestLevelUpCopy = `fastest level up in ${
+      fastestLevelUpObject.days && fastestLevelUpObject.days >= 0
+        ? `${fastestLevelUpObject.days} days `
+        : ""
+    }${
+      fastestLevelUpObject.hours && fastestLevelUpObject.hours >= 0
+        ? `${fastestLevelUpObject.hours} hours`
+        : ""
+    }
+    ${
+      fastestLevelUpObject.minutes && fastestLevelUpObject.minutes >= 0
+        ? `${fastestLevelUpObject.minutes} minutes`
+        : ""
+    }`;
+  }
   const quickStatDates = getQuickStatDates(
     chartData,
     currentLevel,
@@ -68,8 +87,6 @@ export const ProjectionsQuickStats: React.FC<ProjectionQuickStats> = ({
       ? projections.median.days.accelerated
       : projections.median.days.normal
   });
-  console.log(medianProjectionDuration);
-  debugger;
   return (
     <Grid item xs={12}>
       <Typography variant="h4" component="h5">
@@ -97,30 +114,14 @@ export const ProjectionsQuickStats: React.FC<ProjectionQuickStats> = ({
             <ListItemIcon>
               <FastForwardIcon />
             </ListItemIcon>
-            <ListItemText
-              primary={`Fastest level up in ${
-                fastestLevelUpObject.days && fastestLevelUpObject.days >= 0
-                  ? `${fastestLevelUpObject.days} days `
-                  : ""
-              }${
-                fastestLevelUpObject.hours && fastestLevelUpObject.hours >= 0
-                  ? `${fastestLevelUpObject.hours} hours`
-                  : ""
-              }
-              ${
-                fastestLevelUpObject.minutes &&
-                fastestLevelUpObject.minutes >= 0
-                  ? `${fastestLevelUpObject.minutes} minutes`
-                  : ""
-              }`}
-            />
+            <ListItemText primary={fastestLevelUpCopy} />
           </ListItem>
           <ListItem>
             <ListItemIcon>
               <DirectionsWalkIcon />
             </ListItemIcon>
             <ListItemText
-              primary={`Likely level up in ${Math.floor(
+              primary={`Median level up is ${Math.floor(
                 medianProjectionDuration.days
               )} days${
                 Number.isFinite(medianProjectionDuration.days)

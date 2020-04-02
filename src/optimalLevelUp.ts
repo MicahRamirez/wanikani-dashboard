@@ -257,6 +257,10 @@ const calculateAssignmentTimeInSeconds = (
       }
     }
   }
+  // user can level up right now
+  if (requiredSeconds < 0) {
+    requiredSeconds = 0;
+  }
   return requiredSeconds;
 };
 
@@ -313,7 +317,6 @@ export const calculateFastestLevelUpTime = (
     groupBySrsStage,
     newSrsBuckets()
   );
-  console.log("radicalAssignments for this level", radicalAssignments);
   const radicalsBySrsStage = radicalAssignments.reduce<SrsBuckets>(
     groupBySrsStage,
     newSrsBuckets()
