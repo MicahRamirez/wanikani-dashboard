@@ -7,7 +7,7 @@
     "@material-ui/icons": "^4.9.1",
     "@material-ui/lab": "^4.0.0-alpha.47",
     "axios": "^0.19.1",
-    "clsx": "latest",
+    "clsx": "^1.1.0",
     "dexie": "^2.0.4",
     "luxon": "^1.22.0",
     "next": "latest",
