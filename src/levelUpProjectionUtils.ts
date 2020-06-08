@@ -44,14 +44,14 @@ const createProjection = (
   level: number
 ) => {
   let completedAt = data.completedAt.plus({
-    days: projections[projectionType].days.normal
+    days: projections[projectionType].days.normal,
   });
 
   switch (projectionType) {
     case "optimal":
       if (FAST_LEVELS[level]) {
         completedAt = data.completedAt.plus({
-          days: projections[projectionType].days.accelerated
+          days: projections[projectionType].days.accelerated,
         });
       }
       break;
@@ -59,7 +59,7 @@ const createProjection = (
       if (FAST_LEVELS[level]) {
         const {
           optimalLongInDays,
-          optimalShortInDays
+          optimalShortInDays,
         } = calculateOptimalLevelUp();
         const deviationFromOptimal =
           projections[projectionType].days.normal / optimalLongInDays;
@@ -73,14 +73,14 @@ const createProjection = (
     completedAt: completedAt, // data.completedAt shifted by the average, median, or optimal
     time: completedAt.valueOf(),
     type: projectionType,
-    [projectionType]: level
+    [projectionType]: level,
   };
 };
 
 export const formatLevelProgressions = (
   levelProgressions: LevelProgression[]
 ): ChartData[] => {
-  const formattedData = levelProgressions.map<ChartData>(levelProgression => {
+  const formattedData = levelProgressions.map<ChartData>((levelProgression) => {
     const placeHolderDateTime = DateTime.utc();
     const startedAt = levelProgression.started_at
       ? DateTime.fromISO(levelProgression.started_at)
@@ -97,7 +97,7 @@ export const formatLevelProgressions = (
       time:
         completedAt.valueOf() !== placeHolderDateTime.valueOf()
           ? completedAt.valueOf()
-          : 0 // use 0 to signify that this is a placeholder
+          : 0, // use 0 to signify that this is a placeholder
     };
   });
   formattedData.sort((a, b) => {
@@ -131,7 +131,7 @@ export const analyzeResetData = (
   }
   return {
     mostRecentResetTimeStamp: mostRecentReset.confirmed_at,
-    targetLevel: mostRecentReset.target_level
+    targetLevel: mostRecentReset.target_level,
   };
 };
 
@@ -141,7 +141,7 @@ export const filterLevelProgressions = (
   lastResetTimeStamp: string
 ) => {
   const resetDateTime = DateTime.fromISO(lastResetTimeStamp);
-  return levelProgressions.filter(elem => {
+  return levelProgressions.filter((elem) => {
     const levelProgressionTimeStamp = DateTime.fromISO(elem.created_at);
     // maybe can reduce some of this logic but there are two cases *i think* need to be handled
     // past exclusion case, the user could only partially reset thus we don't want to exclude all level progressions that are behind the timestamp
@@ -161,10 +161,10 @@ export const filterLevelProgressions = (
 
 export const getMedianLevelUpInDays = (formattedData: ChartData[]) => {
   const levelUpTimeInDays = formattedData
-    .filter(data => {
+    .filter((data) => {
       return data.time !== 0;
     })
-    .map(data => {
+    .map((data) => {
       return data.completedAt.diff(data.startedAt, "days").days;
     });
   levelUpTimeInDays.sort((a, b) => a - b);
@@ -181,7 +181,7 @@ export const analyzeLevelProgressions = (
   data: WanikaniCollectionWrapper<LevelProgression>[],
   {
     mostRecentResetTimeStamp,
-    targetLevel
+    targetLevel,
   }: {
     mostRecentResetTimeStamp: string | undefined;
     targetLevel: number | undefined;
@@ -209,15 +209,18 @@ export const analyzeLevelProgressions = (
     [projectionType: string]: { days: { normal: number; accelerated: number } };
   } = {
     average: {
-      days: { normal: averageLevelUpInDays, accelerated: averageLevelUpInDays }
+      days: { normal: averageLevelUpInDays, accelerated: averageLevelUpInDays },
     },
     median: {
-      days: { normal: medianLevelUpInDays, accelerated: medianLevelUpInDays }
+      days: { normal: medianLevelUpInDays, accelerated: medianLevelUpInDays },
     },
     optimal: {
-      days: { normal: optimalLongInDays, accelerated: optimalShortInDays }
-    }
+      days: { normal: optimalLongInDays, accelerated: optimalShortInDays },
+    },
   };
+
+  formattedData[formattedData.length - 1].completedAt =
+    formattedData[formattedData.length - 1].startedAt;
   // sketch, but we know the last piece of data on this struct is defined
   const currentLevel = formattedData[formattedData.length - 1].level as number;
   const averageProjection = [...[formattedData[formattedData.length - 1]]];
@@ -252,12 +255,12 @@ export const analyzeLevelProgressions = (
     ...formattedData,
     ...averageProjection,
     ...medianProjection,
-    ...optimalProjection
+    ...optimalProjection,
   ];
   return {
     formattedDataWithProjections,
     averageLevelUpInDays,
     currentLevel,
-    projections
+    projections,
   };
 };
